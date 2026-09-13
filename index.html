@@ -33,6 +33,54 @@
             <input id="worksheet-title" name="title" type="text" value="Arbeitsblatt Brüche" autocomplete="off">
           </div>
 
+          <fieldset class="field-group">
+            <legend class="field-group-label">Niveau</legend>
+            <div class="choice-group">
+              <div class="choice-option">
+                <input type="radio" id="level-basic" name="level" value="basic" checked>
+                <label for="level-basic">Basis</label>
+              </div>
+              <div class="choice-option">
+                <input type="radio" id="level-intermediate" name="level" value="intermediate">
+                <label for="level-intermediate">Mittel</label>
+              </div>
+              <div class="choice-option">
+                <input type="radio" id="level-advanced" name="level" value="advanced">
+                <label for="level-advanced">Anspruchsvoll</label>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend class="field-group-label">Aufgabentypen</legend>
+            <div class="choice-group choice-group--grid3">
+              <div class="choice-option">
+                <input type="checkbox" id="section-kuerzen" name="sections" value="kuerzen" checked>
+                <label for="section-kuerzen">Kürzen</label>
+              </div>
+              <div class="choice-option">
+                <input type="checkbox" id="section-erweitern" name="sections" value="erweitern" checked>
+                <label for="section-erweitern">Erweitern</label>
+              </div>
+              <div class="choice-option">
+                <input type="checkbox" id="section-addition" name="sections" value="addition" checked>
+                <label for="section-addition">Addition</label>
+              </div>
+              <div class="choice-option">
+                <input type="checkbox" id="section-subtraktion" name="sections" value="subtraktion" checked>
+                <label for="section-subtraktion">Subtraktion</label>
+              </div>
+              <div class="choice-option">
+                <input type="checkbox" id="section-multiplikation" name="sections" value="multiplikation" checked>
+                <label for="section-multiplikation">Multiplikation</label>
+              </div>
+              <div class="choice-option">
+                <input type="checkbox" id="section-division" name="sections" value="division" checked>
+                <label for="section-division">Division</label>
+              </div>
+            </div>
+          </fieldset>
+
           <button class="primary-button" type="submit">
             <span aria-hidden="true">✦</span>
             Arbeitsblatt erstellen
@@ -55,21 +103,21 @@
               <span></span><span></span><span></span>
             </div>
             <p>Die Arbeitsblatt-Vorschau erscheint hier.</p>
-            <small>Erstellen Sie Ihr Arbeitsblatt.</small>
+            <small>Wählen Sie Niveau und Aufgabentypen und erstellen Sie Ihr Arbeitsblatt.</small>
           </div>
         </div>
         <button id="print-worksheet" class="secondary-button" type="button" aria-describedby="print-hint" hidden>
           <span aria-hidden="true">↓</span>
           Als PDF speichern
         </button>
-        <p id="print-hint" class="print-hint" hidden>Hinweis: Aktivieren Sie im Druckdialog den beidseitigen Druck (Duplex), damit beide Seiten des Arbeitsblatts korrekt gedruckt werden.</p>
+        <p id="print-hint" class="print-hint" hidden>Hinweis: Aktivieren Sie im Druckdialog den beidseitigen Druck (Duplex). Die Seitenzahl richtet sich nach der gewählten Auswahl.</p>
       </section>
     </div>
   </main>
 
   <footer class="site-footer">
     <span>Arbeitsblattgenerator</span>
-    <span>Für Lehrpersonen · Version 0.4</span>
+    <span>Für Lehrpersonen · Version 0.5</span>
   </footer>
 </body>
 </html>
