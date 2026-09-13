@@ -1,35 +1,73 @@
+// Nur Kürzen und Erweitern sind auf dem Startblatt an — die vier
+// Rechenarten-Abschnitte und Gemischte Aufgaben muss die Lehrkraft bewusst
+// dazuschalten (siehe growToEvenPages-Aufruf im Controller, der Kürzen/
+// Erweitern anschließend proportional bis zur nächsten geraden Seitenzahl
+// hochskaliert, statt mit einem vorkonfigurierten Block zu starten).
 const KUERZEN_COUNT = 32;
 const ERWEITERN_COUNT = 12;
-const OPERATION_SECTION_COUNT = 8;
+const OPERATION_SECTION_DEFAULT_COUNT = 0;
 
 const TASK_GRID_COLUMNS = 4;
 const MIXED_GRID_COLUMNS = 3;
-// Gemischte Aufgaben stehen zu dritt statt zu viert in einer Zeile. Der Wert
-// ist gemessen, nicht aus dem Spaltenverhältnis (4/3) abgeleitet.
-const MIXED_LOAD_FACTOR = 1.3;
 
-// Empirisch angepasst an 58 gemessene Kombinationen (page.pdf()): die erste
-// Seite fasst wegen der Titelzeile rund 55 Aufgaben, jede weitere 59; eine
-// Abschnittsüberschrift kostet etwa 4 Aufgaben Platz. Das Modell ist bewusst
-// leicht pessimistisch — es schätzt nie zu wenige Seiten.
-const FIRST_PAGE_LOAD = 55;
-const PAGE_LOAD_CAPACITY = 59;
-const SECTION_LOAD = 4;
+// Seitenaufteilung rechnet in echten Pixeln der *Druck*-Geometrie, nicht in
+// abstrakten "Lasteinheiten". Alle Werte sind aus einem echten PDF ausgelesen
+// (Textpositionen in page.pdf(), pt → px mit 96/72), nicht geschätzt:
+//   Satzspiegel    Seitenhöhe 1123.84 − 2×16mm Rand (60.47) = 1002.9px
+//   Aufgabenzeile  Zeilenkasten 42 + row-gap 6 → Raster 48px
+//   Überschrift    margin-top 22 + 20 + margin-bottom 12     = 54px
+//                  am Seitenanfang ohne margin-top           = 32px
+//   Titelzeile     26 + margin-bottom 18                     = 44px
+// Wichtig: am Bildschirm misst dieselbe Zeile nur 40.4px (46.19px Raster) —
+// Chromium rendert Text im Druck mit anderen Metriken. Für die Seitenaufteilung
+// zählt allein die Druckgeometrie, sonst bricht die Vorschau an anderen Stellen
+// um als der Ausdruck. Ein Vorgängermodell rechnete mit angepassten
+// Lasteinheiten (55/59 Aufgaben je Seite); die waren gegenüber diesem
+// Stylesheet um rund ein Drittel zu klein, sodass die Vorschau schon nach
+// Abschnitt II umbrach, während der Ausdruck noch III und IV auf dieselbe Seite
+// setzte. Ändern sich Schriftgrößen oder Abstände: am PDF neu messen
+// (siehe CLAUDE.md), nicht nach Augenmaß nachziehen.
+const PAGE_CONTENT_PX = 1002.9;
+const TASK_ROW_BOX_PX = 42;
+const TASK_ROW_GAP_PX = 6;
+const SECTION_HEAD_PX = 54;
+const SECTION_HEAD_TOP_PX = 32;
+// Die Überschrift eines gemischten Blocks trägt das Malzeichen "⋅" aus einer
+// Ersatzschrift (siehe CLAUDE.md) und ist dadurch 1px höher als die anderen.
+// Klingt nach Kleinkram, entscheidet aber echte Grenzfälle: bei einem
+// vermessenen Blatt lag der Umbruch genau auf diesem einen Pixel.
+const MIXED_HEAD_EXTRA_PX = 1;
+const TITLE_PX = 44;
+
+// Der Lösungsteil, ebenfalls am PDF gemessen: eine Antwortzeile ist 23px hoch,
+// vom Ende der letzten Aufgabenzeile bis zur ersten Antwortzeile sind es 78px
+// (margin-top, Trennlinie, padding, "Lösungen"-Label, Gruppenlabel), und von
+// einer Gruppe zur nächsten 24px (10px Abstand + Gruppenlabel). Am Seitenanfang
+// entfällt jeweils der obere Abstand.
+// Der Lösungsteil bricht zeilenweise um, nicht nur zwischen Gruppen: bei einem
+// Blatt mit 64 Kürzen-Aufgaben standen drei Antwortzeilen der ersten Gruppe auf
+// Seite 1 und fünf auf Seite 2.
+// Der "Lösungen"-Balken samt Trennlinie ist ein eigener Block: der Browser
+// lässt ihn am Seitenfuß stehen und beginnt die Gruppen erst auf der nächsten
+// Seite, statt ihn mitzuziehen. Genau so gemessen — auf einem Blatt stand der
+// Balken unten auf Seite 4 und die erste Antwortzeile oben auf Seite 5.
+const SOLUTIONS_COLUMNS = 8;
+const SOLUTIONS_ROW_PX = 23;
+const SOLUTIONS_BANNER_PX = 63.5;
+const SOLUTIONS_BANNER_TOP_PX = 41.5;
+const SOLUTIONS_FIRST_HEAD_PX = 14.5;
+const SOLUTIONS_GROUP_HEAD_PX = 24;
+const SOLUTIONS_GROUP_HEAD_TOP_PX = 15;
 
 const PROPER_FRACTION_SHARE = 0.8;
 const DEFAULT_MAX_NUMERATOR = 26;
 const DEFAULT_MAX_DENOMINATOR = 36;
 const DEFAULT_BLOCK_COUNT = 12;
 const BLOCK_COUNT_OPTIONS = [6, 9, 12, 15, 18, 24, 30];
-// Startbelegung der gemischten Aufgaben: ein Block mit allen vier Rechenarten.
-// Das Startblatt soll auf zwei Seiten passen, und mehr ist darin nicht frei —
-// die sechs Aufgabentypen und ihre Überschriften belegen zusammen mit diesem
-// Block bereits 111.8 der 114 Lasteinheiten zweier Seiten (siehe Lastmodell
-// oben). Ein zweiter Startblock oder ein größerer erster ergäbe drei Seiten.
-const DEFAULT_BLOCK_OPERATIONS = [
-  ["addition", "subtraktion", "multiplikation", "division"]
-];
-const START_BLOCK_COUNT = BLOCK_COUNT_OPTIONS[0];
+// Schnellwahl für die Blockgröße, analog zu TYPE_QUICK_PICKS: eine Auswahl der
+// gängigen Größen aus BLOCK_COUNT_OPTIONS, die Auswahlliste bleibt Quelle für
+// alle Werte (auch die hier ausgelassenen 9 und 15).
+const BLOCK_QUICK_PICKS = [6, 12, 18, 24, 30];
 
 // Aufgabenzahl je Typ: Schnellwahl für die üblichen Größen, Auswahlliste für
 // alles dazwischen. Alle Werte sind Vielfache der Spaltenzahl, damit die
@@ -417,17 +455,13 @@ function nextBlockOption(count) {
   return BLOCK_COUNT_OPTIONS.find((option) => option > count);
 }
 
-function sectionsLoad(standardTotal, mixedTotal, sectionCount) {
-  return standardTotal + mixedTotal * MIXED_LOAD_FACTOR + sectionCount * SECTION_LOAD;
-}
-
 const SECTION_DEFINITIONS = [
   { key: "kuerzen", heading: "Brüche kürzen", count: KUERZEN_COUNT, createTask: createKuerzenTask, type: "kuerzen" },
   { key: "erweitern", heading: "Brüche erweitern", count: ERWEITERN_COUNT, createTask: createErweiternTask, type: "erweitern" },
-  { key: "addition", heading: "Addition", count: OPERATION_SECTION_COUNT, createTask: createAdditionFractionTask, type: "operation" },
-  { key: "subtraktion", heading: "Subtraktion", count: OPERATION_SECTION_COUNT, createTask: createSubtractionFractionTask, type: "operation" },
-  { key: "multiplikation", heading: "Multiplikation", count: OPERATION_SECTION_COUNT, createTask: createMultiplicationFractionTask, type: "operation" },
-  { key: "division", heading: "Division", count: OPERATION_SECTION_COUNT, createTask: createDivisionFractionTask, type: "operation" }
+  { key: "addition", heading: "Addition", count: OPERATION_SECTION_DEFAULT_COUNT, createTask: createAdditionFractionTask, type: "operation" },
+  { key: "subtraktion", heading: "Subtraktion", count: OPERATION_SECTION_DEFAULT_COUNT, createTask: createSubtractionFractionTask, type: "operation" },
+  { key: "multiplikation", heading: "Multiplikation", count: OPERATION_SECTION_DEFAULT_COUNT, createTask: createMultiplicationFractionTask, type: "operation" },
+  { key: "division", heading: "Division", count: OPERATION_SECTION_DEFAULT_COUNT, createTask: createDivisionFractionTask, type: "operation" }
 ];
 
 const DEFAULT_SECTION_COUNTS = Object.fromEntries(
@@ -479,33 +513,34 @@ class WorksheetModel {
     const standardTotal = plan.baseSections.reduce((sum, entry) => sum + entry.count, 0);
     const blockTotal = plan.blocks.reduce((sum, block) => sum + block.count, 0);
     const sectionCount = plan.baseSections.length + plan.blocks.length;
-    const load = standardTotal + blockTotal * MIXED_LOAD_FACTOR + sectionCount * SECTION_LOAD;
-    const pages = estimatePages(load);
+    const units = [
+      ...plan.baseSections.map((entry) => ({ mixed: false, count: entry.count })),
+      ...plan.blocks.map((block) => ({ mixed: true, count: block.count }))
+    ];
+    const { pages, freePx } = paginateWorksheet(units);
     const canGrow = plan.baseSections.some((entry) => entry.count < MAX_TYPE_COUNT)
       || plan.blocks.some((block) => nextBlockOption(block.count) !== undefined);
+    // Eine zusätzliche Aufgabenzeile kostet die Zeile samt Abstand plus die
+    // halbe Zeile, die ihre vier Antworten im 8-spaltigen Lösungsraster belegen.
+    const rowCostPx = TASK_ROW_BOX_PX + TASK_ROW_GAP_PX
+      + (TASK_GRID_COLUMNS / SOLUTIONS_COLUMNS) * SOLUTIONS_ROW_PX;
     return {
       total: standardTotal + blockTotal,
       pages,
-      load,
-      missing: Math.floor(Math.max(0, loadCapacity(pages) - load) / TASK_GRID_COLUMNS) * TASK_GRID_COLUMNS,
+      freePx,
+      missing: Math.floor(freePx / rowCostPx) * TASK_GRID_COLUMNS,
       canGrow,
       incompleteBlocks: (settings.blocks || []).filter((block) => block.operations.length === 0).length,
       empty: sectionCount === 0
     };
   }
 
-  // Zielgröße für "Seiten füllen": auf die nächste gerade Seitenzahl aufrunden,
-  // damit beim beidseitigen Druck keine halb genutzte Seite übrig bleibt. Nach
-  // oben ist die Seitenzahl nicht begrenzt.
-  fillTargetLoad(settings) {
-    const { pages } = this.estimateLayout(settings);
-    return loadCapacity(Math.max(2, pages + (pages % 2)));
-  }
-
-  // Skaliert die gewählten Aufgabenzahlen proportional auf die Zielgröße —
+  // Skaliert die gewählten Aufgabenzahlen proportional auf die Zielseitenzahl —
   // nach oben wie nach unten, damit das von der Lehrkraft eingestellte
   // Verhältnis erhalten bleibt. Ein gewählter Typ fällt dabei nie ganz weg.
-  scaleSectionCounts(settings, targetLoad) {
+  // Geprüft wird direkt die Seitenzahl, nicht ein Ersatzmaß dafür: nur so kann
+  // das Ergebnis nicht doch eine Seite zu lang werden.
+  scaleSectionCounts(settings, targetPages) {
     const activeKeys = Object.keys(settings.sectionCounts).filter((key) => settings.sectionCounts[key] > 0);
     if (activeKeys.length === 0) return settings.sectionCounts;
 
@@ -519,8 +554,9 @@ class WorksheetModel {
         scaled[key] = clamp(raw, TASK_GRID_COLUMNS, MAX_TYPE_COUNT);
       });
       if (!smallest) smallest = scaled;
-      // Die Last wächst monoton mit dem Faktor: die erste Überschreitung endet die Suche.
-      if (this.estimateLayout({ ...settings, sectionCounts: scaled }).load > targetLoad) break;
+      // Die Seitenzahl wächst monoton mit dem Faktor: die erste Überschreitung
+      // endet die Suche.
+      if (this.estimateLayout({ ...settings, sectionCounts: scaled }).pages > targetPages) break;
       best = scaled;
     }
     return best || smallest;
@@ -531,10 +567,11 @@ class WorksheetModel {
   // weil alle Typen am Maximum stehen), wird stattdessen auf die nächstkleinere
   // gerade Seitenzahl verkleinert — sonst bliebe das Blatt dauerhaft ungerade.
   fillCounts(settings) {
-    const grown = this.scaleSectionCounts(settings, this.fillTargetLoad(settings));
+    const { pages } = this.estimateLayout(settings);
+    const grown = this.scaleSectionCounts(settings, Math.max(2, pages + (pages % 2)));
     const grownPages = this.estimateLayout({ ...settings, sectionCounts: grown }).pages;
     if (grownPages % 2 === 0) return grown;
-    return this.scaleSectionCounts(settings, loadCapacity(Math.max(2, grownPages - 1)));
+    return this.scaleSectionCounts(settings, Math.max(2, grownPages - 1));
   }
 
   // Eine Beispielaufgabe je Block, erzeugt mit demselben Generator wie das
@@ -596,58 +633,86 @@ class WorksheetModel {
   }
 }
 
-function estimatePages(load) {
-  if (load <= FIRST_PAGE_LOAD) return 1;
-  return 1 + Math.ceil((load - FIRST_PAGE_LOAD) / PAGE_LOAD_CAPACITY);
+// Die Abschnitte, auf die es für die Seitenaufteilung ankommt: Reihenfolge wie
+// im Blatt, je Abschnitt nur Aufgabenzahl und Rasterbreite. Sowohl der Plan aus
+// dem Formular (planSections) als auch ein fertiges Arbeitsblatt lassen sich
+// darauf abbilden — so rechnen Hinweis und Vorschau garantiert mit demselben.
+function worksheetUnits(worksheet) {
+  return worksheet.sections.map((section) => ({ mixed: section.type === "mixed", count: section.tasks.length }));
 }
 
-function loadCapacity(pages) {
-  return FIRST_PAGE_LOAD + (pages - 1) * PAGE_LOAD_CAPACITY;
-}
-
-// Läuft dasselbe Lastmodell wie estimatePages Aufgabe für Aufgabe durch, um
-// die Vorschau an denselben Stellen sichtbar zu unterteilen, an denen der
-// Druck voraussichtlich umbricht. Das ist eine Näherung wie das Lastmodell
-// selbst — sie markiert, wo eine neue Seite beginnt, nicht das exakte Pixel.
-function computePageBreaks(worksheet) {
+// Bildet die Seitenaufteilung des Druckers nach, indem dieselbe Geometrie
+// durchlaufen wird, die der Browser später umbricht: Zeile für Zeile, und eine
+// Zeile rutscht ganz auf die nächste Seite, sobald sie nicht mehr vollständig
+// passt (break-inside: avoid auf den <li>). Liefert Seitenzahl *und*
+// Umbruchstellen aus einem Durchlauf: vorher gab es dafür zwei getrennte
+// Rechnungen (eine Formel für die Seitenzahl, ein Walker für die Vorschau), die
+// sichtbar auseinanderlaufen konnten.
+function paginateWorksheet(units) {
   const breaks = [];
-  let load = 0;
-  let capacity = FIRST_PAGE_LOAD;
+  const solutionBreaks = [];
   let page = 1;
-  worksheet.sections.forEach((section, sectionIndex) => {
-    load += SECTION_LOAD;
-    const columns = section.type === "mixed" ? MIXED_GRID_COLUMNS : TASK_GRID_COLUMNS;
-    let lastBreak = -1;
-    section.tasks.forEach((task, taskIndex) => {
-      const cost = section.type === "mixed" ? MIXED_LOAD_FACTOR : 1;
-      if (load + cost > capacity) {
-        page += 1;
-        capacity += PAGE_LOAD_CAPACITY;
-        // Auf den Anfang einer Zeile abrunden: die Markierung trennt zwei <ol>,
-        // und mitten in einer Zeile bliebe die letzte Zeile davor halb leer und
-        // die neue Seite begänne mit einer angebrochenen Zeile.
-        // Die vorgezogenen Aufgaben (höchstens columns - 1) bleiben dabei der
-        // alten Seite angerechnet. Die folgenden Markierungen stehen dadurch um
-        // bis zu drei Lasteinheiten je vorangegangenem Umbruch zu spät. Das ist
-        // Absicht: das Lastmodell füllt die Seiten ohnehin zu vorsichtig (in 28
-        // vermessenen Konfigurationen druckten zwei eine Seite weniger als
-        // vorhergesagt, keine eine Seite mehr), die Verschiebung geht also in
-        // dieselbe Richtung wie die Wirklichkeit. Die Anrechnung mitzuziehen
-        // wäre die exaktere, aber schlechtere Lösung: dann könnten mehr
-        // Markierungen entstehen, als der Hinweis unter dem Formular Seiten
-        // nennt, und Vorschau und Hinweis widersprächen sich sichtbar.
-        // Die Abrundung kann den Umbruch nicht hinter einen vorherigen ziehen:
-        // eine Seite fasst immer mehr als eine Zeile, sonst bliebe lastBreak
-        // die Notbremse.
-        const rowStart = Math.floor(taskIndex / columns) * columns;
-        const snapped = rowStart > lastBreak ? rowStart : taskIndex;
-        lastBreak = snapped;
-        breaks.push({ sectionIndex, taskIndex: snapped, page });
+  let used = TITLE_PX;
+  const nextPage = () => { page += 1; used = 0; };
+
+  units.forEach((unit, sectionIndex) => {
+    const columns = unit.mixed ? MIXED_GRID_COLUMNS : TASK_GRID_COLUMNS;
+    const rows = Math.ceil(unit.count / columns);
+    const extra = unit.mixed ? MIXED_HEAD_EXTRA_PX : 0;
+    // break-after: avoid-page auf der Überschrift: sie darf nicht allein am
+    // Seitenfuß stehen, sondern wandert mit ihrer ersten Zeile weiter.
+    let headPx = (sectionIndex === 0 ? SECTION_HEAD_TOP_PX : SECTION_HEAD_PX) + extra;
+    if (used + headPx + TASK_ROW_BOX_PX > PAGE_CONTENT_PX) {
+      nextPage();
+      breaks.push({ sectionIndex, taskIndex: 0, page });
+      // Am Seitenanfang fällt der obere Abstand weg (Ränder werden beim
+      // Seitenumbruch abgeschnitten), die Überschrift kostet dort weniger.
+      headPx = SECTION_HEAD_TOP_PX + extra;
+    }
+    used += headPx;
+
+    for (let row = 0; row < rows; row++) {
+      // Der row-gap sitzt *zwischen* zwei Zeilen — hinter der letzten Zeile
+      // eines Abschnitts gibt es keinen. Ihn dort mitzuzählen verschöbe jeden
+      // folgenden Abschnitt um 6px und über ein langes Blatt um ganze Zeilen.
+      const top = used + (row === 0 ? 0 : TASK_ROW_GAP_PX);
+      if (top + TASK_ROW_BOX_PX > PAGE_CONTENT_PX) {
+        nextPage();
+        breaks.push({ sectionIndex, taskIndex: row * columns, page });
+        used = TASK_ROW_BOX_PX;
+      } else {
+        used = top + TASK_ROW_BOX_PX;
       }
-      load += cost;
-    });
+    }
   });
-  return breaks;
+
+  // Der Lösungsteil zählt mit: bei großen Blättern füllt er über eine ganze
+  // Seite. Eine Gruppe bleibt dabei immer zusammen (break-inside: avoid, siehe
+  // Stylesheet) — sie ist selbst bei 64 Antworten nur acht Zeilen hoch.
+  let bannerPage = page;
+  if (units.length) {
+    if (used + SOLUTIONS_BANNER_PX > PAGE_CONTENT_PX) {
+      nextPage();
+      used = SOLUTIONS_BANNER_TOP_PX;
+    } else {
+      used += SOLUTIONS_BANNER_PX;
+    }
+    bannerPage = page;
+  }
+
+  units.forEach((unit, groupIndex) => {
+    const groupPx = Math.ceil(unit.count / SOLUTIONS_COLUMNS) * SOLUTIONS_ROW_PX;
+    const headPx = groupIndex === 0 ? SOLUTIONS_FIRST_HEAD_PX : SOLUTIONS_GROUP_HEAD_PX;
+    if (used + headPx + groupPx > PAGE_CONTENT_PX) {
+      nextPage();
+      solutionBreaks.push({ groupIndex, rowIndex: 0, page });
+      used = SOLUTIONS_GROUP_HEAD_TOP_PX + groupPx;
+    } else {
+      used += headPx + groupPx;
+    }
+  });
+
+  return { pages: page, breaks, solutionBreaks, bannerPage, freePx: Math.max(0, PAGE_CONTENT_PX - used) };
 }
 
 class WorksheetView {
@@ -663,13 +728,13 @@ class WorksheetView {
     this.blockList = root.querySelector("#block-list");
     this.addBlockButton = root.querySelector("#add-block");
     this.fillButton = root.querySelector("#fill-pages");
+    this.fillNote = root.querySelector("#fill-pages-note");
     this.fillHint = root.querySelector("#fill-hint");
     this.previewTitle = root.querySelector("#preview-title");
     this.previewCanvas = root.querySelector("#preview-canvas");
     // Dieselbe Aktion steht oben und unten; beide Schaltflächen tragen
     // data-action="print" statt einer zweiten ID.
     this.printButtons = Array.from(root.querySelectorAll("[data-action='print']"));
-    this.printHint = root.querySelector("#print-hint");
     this.typeList = root.querySelector("#type-list");
     // Dieselbe Aktion steht oben und unten; beide tragen data-action="create".
     this.submitButtons = Array.from(root.querySelectorAll("[data-action='create']"));
@@ -733,6 +798,18 @@ class WorksheetView {
 
   setBlockCount(index, count) {
     this.blockList.querySelectorAll(".block-count")[index].value = String(count);
+    this.syncBlockQuickPicks();
+  }
+
+  // Dasselbe Prinzip wie syncQuickPicks, nur je Block statt je Typ-Zeile: die
+  // Auswahlliste des Blocks führt den Wert, die Schnellwahl zeigt ihn nur an.
+  syncBlockQuickPicks() {
+    this.blockList.querySelectorAll(".block-card").forEach((card) => {
+      const value = card.querySelector(".block-count").value;
+      card.querySelectorAll(".quick-pick").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.count === value));
+      });
+    });
   }
 
   syncBlockWarnings() {
@@ -771,10 +848,10 @@ class WorksheetView {
   }
 
   bindSettingsChange(handler) {
-    const sync = (event) => {
-      this.syncProperOnlyWithSliders(event ? event.target : null);
+    const sync = () => {
       this.syncRangeOutputs();
       this.syncQuickPicks();
+      this.syncBlockQuickPicks();
       this.syncBlockWarnings();
       handler();
     };
@@ -782,47 +859,26 @@ class WorksheetView {
     this.form.addEventListener("change", sync);
   }
 
-  // Obergrenze des Zähler-Schiebers, solange "Zähler immer kleiner" gilt: einen
-  // unter dem Nenner. Gleichstand reicht nicht — bei Zähler 36 und Nenner 36
-  // wäre 36/36 erlaubt, und das ist kein echter Bruch kleiner als eins.
-  // Das Maximum des Schiebers begrenzt nach unten: bei Nenner 10 gäbe es sonst
-  // eine Obergrenze von 9, die der Zähler-Schieber gar nicht einstellen kann.
-  properNumeratorCap() {
-    const floor = Number(this.maxNumeratorInput.min) || 1;
-    return Math.max(floor, Number(this.maxDenominatorInput.value) - 1);
-  }
-
-  // "Zähler immer kleiner" und die beiden Zahlenbereich-Schieber halten sich
-  // gegenseitig konsistent: Wird die Checkbox angehakt, während der
-  // Zähler-Schieber zu hoch steht, zieht er auf einen unter den Nenner nach,
-  // damit die Bedingung sofort erfüllt ist.
-  // Werden stattdessen die Schieber bewegt, folgt die Checkbox automatisch
-  // dem, was die Schieberstellung bereits hergibt — Zähler unter Nenner
-  // bedeutet angehakt, sonst abgehakt. Andere Formularänderungen lassen beides
-  // unangetastet.
-  syncProperOnlyWithSliders(target) {
-    if (target === this.properOnlyInput) {
-      // Nur nach unten angleichen: ein bereits kleinerer Zählerbereich bleibt
-      // stehen. Ihn anzuheben würde den von der Lehrkraft eingestellten
-      // Zahlenbereich beim Anhaken stillschweigend vergrößern.
-      const cap = this.properNumeratorCap();
-      if (this.properOnlyInput.checked && Number(this.maxNumeratorInput.value) > cap) {
-        this.maxNumeratorInput.value = String(cap);
-      }
-      return;
-    }
-    if (target !== this.maxNumeratorInput && target !== this.maxDenominatorInput) return;
-    this.properOnlyInput.checked = Number(this.maxNumeratorInput.value) <= this.properNumeratorCap();
-  }
-
+  // Dieselbe Schnellwahl-Logik bedient beide Listen: ein Typ-Knopf trägt
+  // data-key (welche Zeile), ein Block-Knopf data-block-id (welcher Block) —
+  // das eine oder das andere ist immer gesetzt, nie beides.
   bindQuickPick(handler) {
-    this.typeList.addEventListener("click", (event) => {
+    const applyPick = (event) => {
       const button = event.target.closest(".quick-pick");
       if (!button) return;
-      this.typeList.querySelector(`#count-${button.dataset.key}`).value = button.dataset.count;
-      this.syncQuickPicks();
+      if (button.dataset.key) {
+        this.typeList.querySelector(`#count-${button.dataset.key}`).value = button.dataset.count;
+        this.syncQuickPicks();
+      } else if (button.dataset.blockId) {
+        this.blockList.querySelector(`#block-${button.dataset.blockId}-count`).value = button.dataset.count;
+        this.syncBlockQuickPicks();
+      } else {
+        return;
+      }
       handler();
-    });
+    };
+    this.typeList.addEventListener("click", applyPick);
+    this.blockList.addEventListener("click", applyPick);
   }
 
   bindAddBlock(handler) {
@@ -855,10 +911,10 @@ class WorksheetView {
       const ol = li.closest(".task-list");
       const sectionEl = ol.closest(".worksheet-section");
       const sectionKey = sectionEl.dataset.sectionKey;
-      // Ein Abschnitt kann durch die Seitenumbruch-Markierungen in mehrere
-      // <ol> aufgeteilt sein; der Index innerhalb der angeklickten Liste ist
-      // dann nicht der Index im Abschnitt. Das start-Attribut der Liste
-      // liefert den Versatz (siehe buildSectionHtml).
+      // Ein Abschnitt kann über mehrere Seiten (und damit mehrere <ol>, je
+      // eines pro .worksheet-paper) verteilt sein; der Index innerhalb der
+      // angeklickten Liste ist dann nicht der Index im Abschnitt. Das
+      // start-Attribut der Liste liefert den Versatz (siehe buildSectionChunks).
       const offset = Number(ol.getAttribute("start") || "1") - 1;
       const taskIndex = offset + Array.from(ol.children).indexOf(li);
       handler(sectionKey, taskIndex);
@@ -881,6 +937,12 @@ class WorksheetView {
     const countOptions = BLOCK_COUNT_OPTIONS
       .map((value) => `<option value="${value}"${value === selected ? " selected" : ""}>${value}</option>`)
       .join("");
+    // Dieselbe Schnellwahl-plus-Auswahlliste wie bei den Aufgabentypen: die
+    // Auswahlliste führt den Wert, die Schnellwahl-Knöpfe (data-block-id statt
+    // data-key, siehe bindQuickPick) setzen und spiegeln ihn nur.
+    const picks = BLOCK_QUICK_PICKS.map((value) => `
+        <button type="button" class="quick-pick" data-block-id="${blockId}" data-count="${value}"
+          aria-label="Aufgaben: ${value}">${value}</button>`).join("");
 
     const card = document.createElement("div");
     card.className = "block-card";
@@ -899,12 +961,16 @@ class WorksheetView {
       </p>
       <div class="block-count-row">
         <label for="block-${blockId}-count">Aufgaben</label>
-        <select class="block-count" id="block-${blockId}-count">${countOptions}</select>
+        <div class="type-controls">
+          <div class="quick-picks">${picks}</div>
+          <select class="block-count" id="block-${blockId}-count">${countOptions}</select>
+        </div>
       </div>`;
 
     this.blockList.appendChild(card);
     this.refreshBlockLabels();
     this.syncBlockWarnings();
+    this.syncBlockQuickPicks();
   }
 
   refreshBlockLabels() {
@@ -941,10 +1007,17 @@ class WorksheetView {
     }
     this.fillHint.textContent = text;
     this.fillHint.dataset.state = state;
-    // Bei ungerader Seitenzahl bleibt der Knopf aktiv, auch wenn nichts mehr
-    // wachsen kann: dann wird auf die nächstkleinere gerade Seitenzahl gekürzt.
-    this.fillButton.disabled = layout.empty
-      || !(odd || (layout.canGrow && layout.missing >= TASK_GRID_COLUMNS));
+    // Der Knopf erscheint nur, wenn er etwas verbessern könnte: bei ungerader
+    // Seitenzahl hilft er immer (notfalls durch Verkleinern auf die
+    // nächstkleinere gerade Seitenzahl), sonst nur, wenn noch genug wächst, um
+    // die letzte Seite spürbar voller zu machen. Ist nichts ausgewählt, kann er
+    // ohnehin nichts tun. Anders als ein bloßes disabled blendet das den Knopf
+    // (und die erklärende Notiz darunter) ganz aus, statt ihn wirkungslos
+    // stehen zu lassen — "nur anzeigen, wenn es hilft" statt "anzeigen, aber
+    // manchmal nichts tun".
+    const helpful = !layout.empty && (odd || (layout.canGrow && layout.missing >= TASK_GRID_COLUMNS));
+    this.fillButton.hidden = !helpful;
+    this.fillNote.hidden = !helpful;
     this.submitButtons.forEach((button) => { button.disabled = layout.empty; });
   }
 
@@ -995,113 +1068,214 @@ class WorksheetView {
     return this.fractionHtml(task.answerNumerator, task.answerDenominator);
   }
 
-  // pageBreaks: aufsteigend sortierte taskIndex-Stellen, an denen laut
-  // Lastmodell innerhalb dieses Abschnitts eine neue Seite beginnt. Die Liste
-  // wird dafür in mehrere <ol> aufgeteilt, deren start-Attribut die
-  // abschnittseigene Nummerierung fortsetzt — Seiten unterbrechen die Zählung
-  // nicht, nur Abschnitte tun das (siehe Nummerierungslogik weiter oben).
-  buildSectionHtml(section, sectionNumber, pageBreaks = []) {
+  // sectionBreaks: aufsteigend sortierte {taskIndex, page}-Stellen, an denen
+  // laut Lastmodell innerhalb dieses Abschnitts eine neue Seite beginnt.
+  // Ergebnis ist ein Chunk pro Seite, auf die der Abschnitt fällt — jeder
+  // Chunk bleibt in sein eigenes .worksheet-section gewickelt (nur der erste
+  // trägt die Überschrift), weil bindTaskClick per closest('.worksheet-section')
+  // den data-section-key sucht: eine fortgesetzte Liste auf einer späteren
+  // Seite ohne diesen Wrapper wäre nicht mehr anklickbar. Das <ol>-start
+  // setzt die abschnittseigene Nummerierung über Seiten hinweg fort — Seiten
+  // unterbrechen die Zählung nicht, nur Abschnitte tun das (siehe
+  // Nummerierungslogik weiter oben).
+  buildSectionChunks(section, sectionNumber, sectionBreaks, startPage) {
     const listClass = section.type === "mixed" ? "task-list task-list--mixed" : "task-list";
-    let listsHtml = "";
+    const headingHtml = `
+      <div class="section-heading-row">
+        <h4 class="section-heading">${toRoman(sectionNumber)}. ${escapeHtml(section.heading)}</h4>
+        <span class="section-heading-line" aria-hidden="true"></span>
+      </div>`;
+    let boundaries = sectionBreaks;
+    let page = startPage;
+    // Ein Umbruch bei taskIndex 0 verschiebt den ganzen Abschnitt auf eine
+    // neue Seite, ohne dass davor etwas von ihm steht — dafür nur die
+    // Startseite übernehmen, statt einen leeren Chunk mit der Überschrift auf
+    // der alten Seite zu erzeugen.
+    if (boundaries.length && boundaries[0].taskIndex === 0) {
+      page = boundaries[0].page;
+      boundaries = boundaries.slice(1);
+    }
+    const chunks = [];
     let start = 0;
-    pageBreaks.forEach(({ taskIndex, page }) => {
-      const items = section.tasks.slice(start, taskIndex).map((task) => this.buildItemHtml(section.type, task)).join("");
-      listsHtml += `<ol class="${listClass}" start="${start + 1}">${items}</ol>${this.buildPageBreakHtml(page)}`;
-      start = taskIndex;
+    let first = true;
+    const pushChunk = (end, chunkPage) => {
+      const items = section.tasks.slice(start, end).map((task) => this.buildItemHtml(section.type, task)).join("");
+      const ol = `<ol class="${listClass}" start="${start + 1}">${items}</ol>`;
+      // Fortsetzungen tragen --continued: ohne das brächte jede Fortsetzung im
+      // Druck den margin-top eines neuen Abschnitts mit (22px), den es vor der
+      // Aufteilung in Seiten-Chunks nicht gab — die geschätzte Aufteilung würde
+      // dann den echten Druck verschieben und sich selbst widerlegen.
+      const classes = first ? "worksheet-section" : "worksheet-section worksheet-section--continued";
+      chunks.push({ page: chunkPage, html: `<div class="${classes}" data-section-key="${section.key}">${first ? headingHtml : ""}${ol}</div>` });
+      first = false;
+      start = end;
+    };
+    boundaries.forEach(({ taskIndex, page: nextPage }) => {
+      pushChunk(taskIndex, page);
+      page = nextPage;
     });
-    const items = section.tasks.slice(start).map((task) => this.buildItemHtml(section.type, task)).join("");
-    listsHtml += `<ol class="${listClass}" start="${start + 1}">${items}</ol>`;
+    pushChunk(section.tasks.length, page);
+    return chunks;
+  }
+
+  // Ein Stück einer Lösungsgruppe: das Label trägt nur das erste Stück, das
+  // start-Attribut setzt die Nummerierung über einen Seitenumbruch hinweg fort.
+  // Die Abstandsklassen stehen explizit im Markup statt über :first-of-type,
+  // damit der Abstand nicht davon abhängt, wie die Vorschau die Gruppen auf
+  // Seiten verteilt — sonst verschöbe die Aufteilung den echten Druck.
+  buildSolutionsFragmentHtml(section, sectionNumber, answers, start, end, { first, groupStart }) {
+    const items = answers.slice(start, end).join("");
+    const label = groupStart
+      ? `<p class="solutions-group-label">${toRoman(sectionNumber)}. ${escapeHtml(section.heading)}</p>`
+      : "";
+    const modifier = first ? " solutions-group--first" : (groupStart ? "" : " solutions-group--continued");
     return `
-      <div class="worksheet-section" data-section-key="${section.key}">
-        <div class="section-heading-row">
-          <h4 class="section-heading">${toRoman(sectionNumber)}. ${escapeHtml(section.heading)}</h4>
-          <span class="section-heading-line" aria-hidden="true"></span>
-        </div>
-        ${listsHtml}
+      <div class="solutions-group${modifier}">
+        ${label}
+        <ol class="solutions-list" start="${start + 1}">${items}</ol>
       </div>`;
   }
 
-  // Rein visuelle Markierung in der Vorschau, wo laut Lastmodell voraussichtlich
-  // umbrochen wird — eine Näherung, kein exaktes Abbild des Druckdialogs.
-  buildPageBreakHtml(page) {
-    return `
-      <div class="page-break" role="presentation">
-        <span class="page-break-label">Seite ${page - 1} Ende</span>
-        <span class="page-break-label">Seite ${page}</span>
-      </div>`;
+  // Der Lösungsteil wird wie die Aufgabenabschnitte auf Seiten verteilt: bei
+  // einem großen Blatt ist er über eine Seite hoch. Umbrochen wird nur zwischen
+  // zwei Gruppen (siehe paginateWorksheet). Die Fortsetzung auf einer Folgeseite
+  // trägt kein "Lösungen"-Label und keine Trennlinie mehr — sie beginnt ohnehin
+  // ganz oben auf einem frischen Blatt.
+  buildSolutionsChunks(worksheet, solutionBreaks, bannerPage) {
+    if (!worksheet.sections.length) return [];
+    // Der "Lösungen"-Balken ist ein eigenes Stück: er kann am Fuß der
+    // vorigen Seite stehen bleiben, während die Gruppen erst auf der nächsten
+    // beginnen — genau das macht der Druck (siehe paginateWorksheet).
+    const parts = [{ page: bannerPage, banner: true, html: '<p class="worksheet-label">Lösungen</p>' }];
+    let page = bannerPage;
+    let isFirstFragmentOfKey = true;
+    worksheet.sections.forEach((section, groupIndex) => {
+      const answers = section.tasks.map((task) => `<li>${this.buildAnswerHtml(section.type, task)}</li>`);
+      const rowBreaks = solutionBreaks.filter((entry) => entry.groupIndex === groupIndex);
+      let start = 0;
+      let groupStart = true;
+      const pushFragment = (end, fragmentPage) => {
+        if (end <= start) return;
+        parts.push({
+          page: fragmentPage,
+          html: this.buildSolutionsFragmentHtml(section, groupIndex + 1, answers, start, end, {
+            first: isFirstFragmentOfKey,
+            groupStart
+          })
+        });
+        isFirstFragmentOfKey = false;
+        groupStart = false;
+        start = end;
+      };
+      rowBreaks.forEach(({ rowIndex, page: nextPageNo }) => {
+        pushFragment(rowIndex * SOLUTIONS_COLUMNS, page);
+        page = nextPageNo;
+      });
+      pushFragment(answers.length, page);
+    });
+
+    // Aufeinanderfolgende Stücke derselben Seite teilen sich einen
+    // .worksheet-solutions-Rahmen. Nur der Rahmen mit dem Balken trägt
+    // Trennlinie und Abstand; die Fortsetzungen beginnen oben auf einem
+    // frischen Blatt und brauchen beides nicht.
+    const chunks = [];
+    parts.forEach((part) => {
+      const last = chunks[chunks.length - 1];
+      if (last && last.page === part.page) {
+        last.content += part.html;
+      } else {
+        chunks.push({ page: part.page, content: part.html, withBanner: Boolean(part.banner) });
+      }
+    });
+    return chunks.map(({ page: chunkPage, content, withBanner }) => ({
+      page: chunkPage,
+      html: `
+      <section class="worksheet-solutions${withBanner ? "" : " worksheet-solutions--continued"}">
+        ${content}
+      </section>`
+    }));
   }
 
-  buildSolutionsGroupHtml(section, sectionNumber) {
-    const items = section.tasks.map((task) => `<li>${this.buildAnswerHtml(section.type, task)}</li>`).join("");
-    return `
-      <div class="solutions-group">
-        <p class="solutions-group-label">${toRoman(sectionNumber)}. ${escapeHtml(section.heading)}</p>
-        <ol class="solutions-list" start="1">${items}</ol>
-      </div>`;
-  }
-
-  buildSolutionsHtml(worksheet) {
+  // Baut den ganzen Aufgabenteil als Kette von {page, html}-Chunks in
+  // Lesereihenfolge, statt eines einzigen Strings mit Umbruch-Markierungen
+  // darin — jeder Chunk weiß, auf welche geschätzte Seite er gehört, damit
+  // renderPreview ihn dem passenden .worksheet-paper zuordnen kann.
+  buildTaskChunks(worksheet, pageBreaks) {
+    const chunks = [];
     let sectionNumber = 0;
-    const groups = worksheet.sections.map((section) => this.buildSolutionsGroupHtml(section, ++sectionNumber)).join("");
-    return `
-      <section class="worksheet-solutions">
-        <p class="worksheet-label">Lösungen</p>
-        ${groups}
-      </section>`;
+    let currentPage = 1;
+    worksheet.sections.forEach((section, sectionIndex) => {
+      sectionNumber += 1;
+      const sectionBreaks = pageBreaks.filter((b) => b.sectionIndex === sectionIndex);
+      const sectionChunks = this.buildSectionChunks(section, sectionNumber, sectionBreaks, currentPage);
+      chunks.push(...sectionChunks);
+      currentPage = sectionChunks[sectionChunks.length - 1].page;
+    });
+    return chunks;
   }
 
   renderPreview(worksheet) {
     const worksheetTitle = worksheet.title || "Arbeitsblatt Brüche";
-    const pageBreaks = computePageBreaks(worksheet);
-    let sectionNumber = 0;
-    const sectionsHtml = worksheet.sections.map((section, sectionIndex) => {
-      // Ein Umbruch direkt vor dem ersten Task eines Abschnitts trennt zwei
-      // Abschnitte statt eine Aufgabenliste — die Markierung steht dann vor
-      // dem ganzen Abschnitt statt in dessen <ol> aufzutauchen.
-      const beforeSection = pageBreaks.find((b) => b.sectionIndex === sectionIndex && b.taskIndex === 0);
-      const withinSection = pageBreaks.filter((b) => b.sectionIndex === sectionIndex && b.taskIndex > 0);
-      const marker = beforeSection ? this.buildPageBreakHtml(beforeSection.page) : "";
-      return marker + this.buildSectionHtml(section, ++sectionNumber, withinSection);
-    }).join("");
+    const { breaks, solutionBreaks, bannerPage } = paginateWorksheet(worksheetUnits(worksheet));
+    const chunks = this.buildTaskChunks(worksheet, breaks);
+    chunks.push(...this.buildSolutionsChunks(worksheet, solutionBreaks, bannerPage));
+
+    // Chunks sind bereits nach aufsteigender Seite sortiert (paginateWorksheet
+    // zählt nur vorwärts) — benachbarte Chunks mit derselben Seite landen
+    // deshalb in genau einem Array-Eintrag, nie verstreut über mehrere.
+    const pages = [];
+    chunks.forEach((chunk) => {
+      const last = pages[pages.length - 1];
+      if (last && last.page === chunk.page) {
+        last.html += chunk.html;
+      } else {
+        pages.push({ page: chunk.page, html: chunk.html });
+      }
+    });
+    // Ist nichts ausgewählt, bleibt trotzdem ein leeres Blatt mit der
+    // Titelzeile stehen statt einer leeren Vorschaufläche.
+    if (!pages.length) pages.push({ page: 1, html: "" });
+
+    const pagesHtml = pages.map(({ html }, index) => `
+      <article class="worksheet-paper" lang="de">
+        ${index === 0 ? `<h3 class="worksheet-title-line">${escapeHtml(worksheetTitle)}</h3>` : ""}
+        ${html}
+      </article>`).join("");
 
     this.previewTitle.textContent = worksheetTitle;
     this.previewCanvas.dataset.ready = "true";
     this.previewCanvas.innerHTML = `
       <div class="preview-stage">
         <div class="preview-scaler">
-          <article class="worksheet-paper" lang="de">
-            <h3 class="worksheet-title-line">${escapeHtml(worksheetTitle)}</h3>
-            ${sectionsHtml}
-            ${this.buildSolutionsHtml(worksheet)}
-          </article>
+          <div class="worksheet-pages">${pagesHtml}</div>
         </div>
       </div>`;
     this.fitPreview();
     this.printButtons.forEach((button) => { button.hidden = false; });
-    this.printHint.hidden = false;
   }
 
-  // Das Blatt hat immer A4-Maße (siehe .worksheet-paper). Passt es nicht in die
-  // Vorschauspalte, wird es als Ganzes verkleinert statt in der Breite
+  // Jedes Blatt hat A4-Maße (siehe .worksheet-paper); .worksheet-pages ist der
+  // ganze Stapel inklusive der Lücken dazwischen. Passt der Stapel nicht in
+  // die Vorschauspalte, wird er als Ganzes verkleinert statt in der Breite
   // gestaucht — eine Stauchung würde einen anderen Zeilen- und Spaltenumbruch
   // zeigen als der Ausdruck. Vergrößert wird nie: 100% ist Originalgröße.
   fitPreview() {
     const stage = this.previewCanvas.querySelector(".preview-stage");
-    const paper = this.previewCanvas.querySelector(".worksheet-paper");
-    if (!stage || !paper) return;
+    const pages = this.previewCanvas.querySelector(".worksheet-pages");
+    if (!stage || !pages) return;
     const canvasStyles = window.getComputedStyle(this.previewCanvas);
     const available = this.previewCanvas.clientWidth
       - parseFloat(canvasStyles.paddingLeft)
       - parseFloat(canvasStyles.paddingRight);
     // offsetWidth/offsetHeight ignorieren das transform und liefern damit die
-    // ungeskalierte A4-Größe — genau die Bezugsgröße für den Faktor.
-    const paperWidth = paper.offsetWidth;
-    const paperHeight = paper.offsetHeight;
-    if (!paperWidth || !paperHeight || !(available > 0)) return;
-    const scale = Math.min(1, available / paperWidth);
+    // ungeskalierte Größe — genau die Bezugsgröße für den Faktor.
+    const pagesWidth = pages.offsetWidth;
+    const pagesHeight = pages.offsetHeight;
+    if (!pagesWidth || !pagesHeight || !(available > 0)) return;
+    const scale = Math.min(1, available / pagesWidth);
     stage.style.setProperty("--preview-scale", scale);
-    stage.style.width = `${Math.round(paperWidth * scale)}px`;
-    stage.style.height = `${Math.round(paperHeight * scale)}px`;
+    stage.style.width = `${Math.round(pagesWidth * scale)}px`;
+    stage.style.height = `${Math.round(pagesHeight * scale)}px`;
   }
 
   // Der Maßstab hängt an der Breite der Vorschauspalte. Beobachtet wird nur
@@ -1136,15 +1310,12 @@ class WorksheetController {
     this.view.bindQuickPick(() => this.updateHint());
     this.view.bindRemoveBlock(() => this.updateHint());
     this.view.syncRangeOutputs();
-    // Startbelegung: ein fertig eingestellter Block, statt mit leeren
-    // "Gemischte Aufgaben" zu starten — klein gehalten, damit das Startblatt
-    // auf zwei Seiten passt (siehe DEFAULT_BLOCK_OPERATIONS).
-    DEFAULT_BLOCK_OPERATIONS.forEach((operations) => this.view.addBlock(START_BLOCK_COUNT, operations));
-    // Startet bereits auf einer geraden Seitenzahl, statt die Lehrkraft dafür
-    // manuell auf "Seiten füllen" klicken zu lassen. Dabei werden nur die
-    // Aufgabentypen und bereits vorhandenen Blöcke ausgebaut — ein Block wird
-    // beim automatischen Start nicht hinzugefügt, das bleibt dem expliziten
-    // Klick vorbehalten.
+    // Startbelegung: nur Kürzen und Erweitern sind an, kein Block. Startet
+    // trotzdem bereits auf einer geraden Seitenzahl, statt die Lehrkraft dafür
+    // manuell auf "Seiten füllen" klicken zu lassen — growToEvenPages skaliert
+    // die beiden aktiven Typen dafür proportional hoch. Mit
+    // allowNewBlocks: false legt es dabei keinen Block an; das bleibt dem
+    // expliziten Klick auf "+ Block gemischte Aufgaben" vorbehalten.
     this.growToEvenPages({ allowNewBlocks: false });
     // Zeigt sofort ein fertiges Arbeitsblatt statt einer leeren Vorschau, auf
     // die die Lehrkraft erst per Klick auf "Arbeitsblatt erstellen" käme.
@@ -1178,8 +1349,8 @@ class WorksheetController {
     }
 
     const pages = this.model.estimateLayout(this.view.readSettings()).pages;
-    const targetLoad = loadCapacity(Math.max(2, pages + (pages % 2)));
-    const fits = (blocks, current) => this.model.estimateLayout({ ...current, blocks }).load <= targetLoad;
+    const targetPages = Math.max(2, pages + (pages % 2));
+    const fits = (blocks, current) => this.model.estimateLayout({ ...current, blocks }).pages <= targetPages;
 
     for (let guard = 0; guard < 80; guard++) {
       const current = this.view.readSettings();

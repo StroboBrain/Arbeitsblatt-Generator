@@ -36,13 +36,13 @@ h1, h2, p { margin-top: 0; }
 /* Die Vorschauspalte bekommt den größeren Anteil, damit das A4-Blatt auf
    einem breiten Bildschirm nahezu in Originalgröße steht: 1.35fr ergeben
    bei voller Shell-Breite einen Maßstab von ~0.97 statt ~0.83. */
-/* Aktionsleiste über der Arbeitsfläche. Die Schaltflächen sind dieselben wie
-   unten in den Panels und deshalb nicht auf volle Breite gestellt; sie wachsen
-   nur auf schmalen Bildschirmen in die Zeilenbreite. */
-.action-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-.action-bar .primary-button, .action-bar .secondary-button { flex: 0 1 auto; width: auto; margin-top: 0; padding-inline: 22px; }
-
 .workspace-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 24px; align-items: start; }
+/* Die jeweils obere Kopie von "Zufälliges Arbeitsblatt erstellen" bzw.
+   "Als PDF exportieren" steht ganz oben im eigenen Panel; ohne diese Regel
+   trüge sie noch den margin-top, der für eine Schaltfläche nach anderem
+   Inhalt gedacht ist, und risse eine unnötige Lücke zur Panel-Innenkante auf. */
+.setup-panel > form > .primary-button:first-child,
+.preview-panel > .secondary-button:first-child { margin-top: 0; margin-bottom: 25px; }
 .panel { min-height: 480px; padding: 31px; background: var(--paper); border: 2px solid var(--ink); box-shadow: var(--shadow); }
 .setup-panel { background: var(--paper); }
 .preview-panel { background: var(--paper); }
@@ -70,8 +70,8 @@ h2 { margin-bottom: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01e
 .quick-pick[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 .quick-pick:focus-visible, .type-count:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .type-count { width: auto; min-height: 0; padding: 4px 6px; border: 1px solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.field-group-label { display: block; margin: 0 0 9px; padding: 0; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.field-group label { display: block; margin-bottom: 9px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.field-group-label { display: block; margin: 0 0 9px; padding: 0; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.field-group label { display: block; margin-bottom: 9px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
 input { width: 100%; min-height: 44px; border: 1px solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; }
 input[type="text"] { padding: 10px 12px; }
 
@@ -111,7 +111,6 @@ input[type="range"]:last-child { margin-bottom: 0; }
 .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 18px; padding: 12px 18px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .secondary-button:hover, .secondary-button:focus-visible { background: var(--canvas); }
 .secondary-button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
-.print-hint { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 
 .block-list { display: grid; gap: 10px; }
 .block-list:not(:empty) { margin-bottom: 10px; }
@@ -121,8 +120,8 @@ input[type="range"]:last-child { margin-bottom: 0; }
 .block-remove { padding: 3px 8px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: inherit; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
 .block-remove:hover, .block-remove:focus-visible { background: var(--accent); color: var(--paper); }
 .block-card[data-incomplete="true"] { border-color: var(--accent); }
-.block-prompt { margin: 0 0 7px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.block-warning { margin: 7px 0 0; color: var(--accent-dark); font-size: 10px; line-height: 1.5; }
+.block-prompt { margin: 0 0 7px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.block-warning { margin: 7px 0 0; color: var(--accent-dark); font-size: 11px; line-height: 1.5; }
 .block-card .choice-group label { padding: 8px 4px; font-size: 14px; }
 /* Beispielaufgabe im Block-Kärtchen. Die Aufgabe selbst ist ein Flex-Container
    wie .task-row in der Vorschau: Operator und Gleichheitszeichen brauchen ihre
@@ -132,32 +131,42 @@ input[type="range"]:last-child { margin-bottom: 0; }
 .block-example { display: flex; align-items: center; gap: 9px; margin: 9px 0 0; padding-top: 9px; border-top: 1px dashed var(--line); }
 .block-example-label { flex: none; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
 .block-example-task { display: inline-flex; align-items: center; gap: 5px; font-size: 15px; line-height: 1.3; }
-.block-count-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 11px; }
-.block-count-row label { margin-bottom: 0; }
+/* Dieselbe Schnellwahl-plus-Auswahlliste wie .type-row, deshalb dieselbe
+   gestapelte Struktur (Label über .type-controls) statt der früheren
+   Seite-an-Seite-Zeile — für fünf Schnellwahl-Knöpfe plus Auswahlliste reicht
+   eine einzelne Zeile neben dem Label nicht. */
+.block-count-row { display: grid; gap: 7px; margin-top: 11px; }
+.block-count-row label { margin-bottom: 0; color: var(--ink); font-size: 12px; letter-spacing: 0.08em; }
 .block-count { min-height: 34px; padding: 4px 8px; border: 1px solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .block-count:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .ghost-button { width: 100%; padding: 10px; border: 2px dashed var(--ink); background: transparent; color: var(--ink); font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
 .ghost-button:hover, .ghost-button:focus-visible { background: var(--ink); color: var(--paper); }
 .ghost-button:focus-visible, .block-remove:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
-.fill-hint { margin: 0; padding: 10px 12px; border-left: 4px solid var(--line); background: var(--canvas); color: var(--muted); font-size: 11px; line-height: 1.55; }
+.fill-hint { margin: 0; padding: 10px 12px; border-left: 4px solid var(--line); background: var(--canvas); color: var(--muted); font-size: 12px; line-height: 1.55; }
 .fill-hint[data-state="warn"] { border-left-color: var(--accent); color: var(--ink); }
 .fill-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 10px; padding: 11px 18px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .fill-button:hover:not(:disabled), .fill-button:focus-visible:not(:disabled) { background: var(--ink); color: var(--paper); }
 .fill-button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
 .fill-button:disabled { border-color: var(--line); color: var(--muted); cursor: not-allowed; }
-.fill-note { margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.fill-note { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 
-/* Die Vorschau zeigt immer ein echtes A4-Blatt: 210mm breit, 16mm Rand wie
-   @page im Druck. Ist die Spalte schmaler, wird das Blatt als Ganzes
-   verkleinert (transform: scale auf .preview-scaler, Faktor aus
+/* Die Vorschau zeigt immer ein oder mehrere echte A4-Blätter: je 210mm breit,
+   16mm Rand wie @page im Druck. Ist die Spalte schmaler, wird der ganze
+   Stapel verkleinert (transform: scale auf .preview-scaler, Faktor aus
    WorksheetView.fitPreview) statt in der Breite gestaucht: nur so zeigt die
    Vorschau denselben Zeilen- und Spaltenumbruch wie der spätere Ausdruck.
    .preview-stage trägt die skalierte Größe als Layoutbox, weil ein
    transform die Layoutbox des Kindes unverändert lässt und die Seite
-   sonst den Platz des ungeskalierten Blattes beanspruchen würde. */
+   sonst den Platz des ungeskalierten Stapels beanspruchen würde. */
 .preview-canvas { display: grid; min-height: 480px; place-items: center; padding: 24px; background: var(--canvas); }
 .preview-stage { position: relative; }
 .preview-scaler { position: absolute; top: 0; left: 0; transform: scale(var(--preview-scale, 1)); transform-origin: top left; }
+/* Jede vorhergesagte Seite ist ein eigenes .worksheet-paper; der Abstand
+   dazwischen macht sie als physisch getrennte Blätter erkennbar statt als
+   eine fortlaufende Fläche mit einer Trennlinie. Im Druck übernimmt ohnehin
+   die echte, browsereigene Paginierung (siehe @media print unten) — dort
+   wird dieser Abstand wieder entfernt, damit der Inhalt lückenlos fließt. */
+.worksheet-pages { display: flex; flex-direction: column; gap: 40px; }
 .paper-placeholder { width: min(100%, 380px); min-height: 300px; padding: 37px 30px; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); text-align: center; }
 .placeholder-lines { display: grid; gap: 9px; margin-bottom: 48px; }
 .placeholder-lines span { display: block; height: 2px; background: var(--line); }
@@ -168,7 +177,22 @@ input[type="range"]:last-child { margin-bottom: 0; }
 /* Rahmen als outline, nicht als border: eine border zählt bei
    box-sizing: border-box in die 210mm hinein, der Satzspiegel wäre dann um
    2px schmaler als im Druck. */
-.worksheet-paper { width: 210mm; min-height: 297mm; padding: 16mm; background: var(--paper); outline: 1px solid var(--line); box-shadow: var(--shadow); color: var(--ink); }
+/* Das erzeugte Blatt bleibt bewusst reines Schwarz-Weiß-Grau: ein Kopiervorlage
+   für den Unterricht soll nicht von Farbe abhängen, und auf einem
+   Schwarz-Weiß-Kopierer würde ein Farbakzent ohnehin nur zu einem Grauton mit
+   unvorhersehbarer Helligkeit. Die Variablen werden hier neu belegt statt global,
+   damit nur der Blattinhalt betroffen ist, nicht die übrige (farbige) Oberfläche. */
+.worksheet-paper {
+  --ink: #262626;
+  --muted: #666666;
+  --paper: #ffffff;
+  --canvas: #e9e9e9;
+  --line: #c9c9c9;
+  --accent: #4d4d4d;
+  --accent-dark: #333333;
+  --shadow: 6px 6px 0 rgba(38, 38, 38, 0.55);
+  width: 210mm; min-height: 297mm; padding: 16mm; background: var(--paper); outline: 1px solid var(--line); box-shadow: var(--shadow); color: var(--ink);
+}
 .worksheet-label { margin-bottom: 7px; color: var(--paper); background: var(--ink); display: inline-block; padding: 2px 8px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 /* Ein zu langer Titel wird auf eine Zeile gekürzt und mit … beendet, statt die
    Titelzeile umbrechen zu lassen: der Umbruch verschiebt den ganzen Satzspiegel
@@ -179,37 +203,45 @@ input[type="range"]:last-child { margin-bottom: 0; }
   padding-top: 14px;
   border-top: 2px solid var(--ink);
 }
+/* Fortsetzung des Lösungsteils auf einer Folgeseite: Trennlinie und Abstand
+   gehören zum Übergang von den Aufgaben zu den Lösungen und wären am Kopf
+   eines frischen Blattes nur eine zweite, sinnlose Linie. */
+.worksheet-solutions--continued { margin-top: 0; padding-top: 0; border-top: 0; }
 .worksheet-section { margin-top: 22px; }
-.worksheet-section:first-of-type { margin-top: 0; }
-/* Nur eine Vorschauhilfe: zeigt an, wo das Lastmodell einen Seitenumbruch
-   erwartet. Im Druck übernimmt die echte Paginierung, die Markierung wird
-   dort ausgeblendet (siehe @media print unten). */
-.page-break {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 26px 0;
-  padding-top: 18px;
-  border-top: 2px dashed var(--accent);
-}
-.page-break-label {
-  flex: none;
-  padding: 3px 8px;
-  background: var(--accent);
-  color: var(--paper);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  transform: translateY(-50%);
+/* Fortsetzung eines Abschnitts auf der nächsten Seite. Kein Abschnittsabstand
+   (22px) — der trennt zwei *Abschnitte*, eine Fortsetzung ist derselbe
+   Abschnitt. Stattdessen genau der row-gap von .task-list: die Fortsetzung ist
+   ein eigenes <ol> und damit ein eigenes Raster, zwischen zwei Rastern gibt es
+   keinen row-gap mehr. Im Druck fließt alles am Stück; ohne diese 6px säße die
+   erste fortgesetzte Zeile 6px zu hoch, und genau diese 6px entschieden in
+   vermessenen Fällen darüber, ob eine Zeile noch auf die Seite passt — die
+   geschätzte Aufteilung verschöbe also den echten Umbruch und widerlegte sich
+   selbst. Aus demselben Grund darf hier kein margin-top eines Abschnitts stehen. */
+.worksheet-section--continued { margin-top: 6px; }
+/* Nur der wirklich erste Abschnitt des ganzen Dokuments (direkt nach dem
+   Titel) bekommt keinen Abstand nach oben. Gilt bewusst auch im Druck, wo
+   dieselbe Regel schon vor der Mehrseiten-Vorschau galt. */
+.worksheet-title-line + .worksheet-section { margin-top: 0; }
+@media screen {
+  /* Jede vom Lastmodell vorhergesagte Seite ist ein eigenes .worksheet-paper
+     (siehe WorksheetView.renderPreview) statt eines fortlaufenden Blocks mit
+     einer Trennlinie — das erste Element einer Seite braucht deshalb keinen
+     Abstand nach oben. Nur für den Bildschirm: im Druck ist diese
+     Seitenaufteilung nur eine Schätzung, die echte Paginierung entscheidet
+     unabhängig davon, wo eine Seite endet, und ein Abschnitt, der zufällig
+     als Seitenanfang geschätzt wurde, ist im tatsächlichen Ausdruck oft kein
+     Seitenanfang — dort muss der normale Abstand gelten. */
+  .worksheet-paper > .worksheet-section:first-child { margin-top: 0; }
 }
 .section-heading-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .section-heading { display: inline-block; flex: none; margin: 0; padding: 3px 9px; background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .section-heading-line { flex: 1; height: 2px; min-width: 20px; background: var(--ink); }
 .solutions-group { margin-top: 10px; }
-.solutions-group:first-of-type { margin-top: 0; }
+/* Explizite Klassen statt :first-of-type: der Abstand darf nicht davon
+   abhängen, wie die Vorschau die Lösungen auf Seiten aufteilt. Mit
+   :first-of-type verlor die erste Gruppe eines fortgesetzten Lösungsteils ihre
+   10px — und verschob damit im Druck, wo die echte Seite umbricht. */
+.solutions-group--first, .solutions-group--continued { margin-top: 0; }
 .solutions-group-label { margin: 0 0 3px; color: var(--accent-dark); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .solutions-list {
   display: grid;
@@ -339,21 +371,48 @@ input[type="range"]:last-child { margin-bottom: 0; }
 
 @media print {
   @page { size: A4; margin: 16mm; }
-  body { background: white; }
-  .site-header, .setup-panel, .site-footer, .action-bar, .preview-panel > .panel-heading, .secondary-button, .print-hint { display: none !important; }
+  /* Ohne dies lassen Chrome/Edge Hintergrundfarben beim Drucken standardmäßig
+     weg, solange die Lehrkraft nicht selbst "Hintergrundgrafiken" im
+     Druckdialog aktiviert — worauf die Oberfläche nirgends hinweist. Die
+     Abschnittsüberschriften (.section-heading, .worksheet-label) sind aber
+     helle Schrift auf dunklem Feld: ohne das Feld bleibt nur nahezu
+     unsichtbarer heller Text auf weißem Papier übrig. print-color-adjust
+     erzwingt den Druck exakt wie auf dem Bildschirm, unabhängig von dieser
+     Voreinstellung. Auf html gesetzt, weil die Eigenschaft vererbt wird.
+     Verifiziert: identisches PDF mit und ohne "Hintergrundgrafiken"-Haken.
+     Das deckt aber auch :root's eigenen (grünen) background auf, der vorher
+     nie gedruckt wurde, weil eben keine Hintergründe druckten — also hier
+     zusätzlich auf weiß zurücksetzen, sonst schimmert dieses Grün dort durch,
+     wo der Blattinhalt die Seite nicht ganz ausfüllt. Das muss :root heißen,
+     nicht html: :root ist eine Pseudoklasse mit höherer Spezifität (0,1,0)
+     als der Typselektor html (0,0,1) und schlägt ihn unabhängig von der
+     Reihenfolge im Stylesheet — ein html-Override hier bliebe sonst wirkungslos. */
+  :root { background: white; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .site-header, .setup-panel, .site-footer, .preview-panel > .panel-heading, .secondary-button { display: none !important; }
   .app-shell, .workspace-grid, .preview-column, .preview-panel, .preview-canvas { display: block; width: auto; min-height: 0; margin: 0; padding: 0; border: 0; box-shadow: none; background: white; }
   .task-hint { display: none !important; }
-  .page-break { display: none !important; }
   /* Im Druck übernimmt @page die Ränder; die Bildschirmskalierung samt
      der von fitPreview() gesetzten Inline-Groessen muss weg (daher
      !important, Inline-Styles gewinnen sonst). */
   .preview-stage, .preview-scaler { position: static !important; width: auto !important; height: auto !important; transform: none !important; }
+  /* Der Abstand zwischen den Seiten-Blättern ist reine Bildschirm-Vorschau
+     (siehe .worksheet-pages oben) — im Druck soll der Inhalt lückenlos
+     fließen, damit allein die echte Paginierung über Seitenumbrüche
+     entscheidet, nicht unsere geschätzte Aufteilung. */
+  .worksheet-pages { display: block !important; }
   .worksheet-paper { width: 100%; min-height: 0; padding: 0; border: 0; outline: 0; box-shadow: none; }
 
   .section-heading-row { break-after: avoid-page; }
   .task-list li { break-inside: avoid; }
   .task-list { orphans: 3; widows: 3; }
 
-  .solutions-group-label { break-after: avoid-page; }
+  /* Eine Lösungsgruppe bleibt als Ganzes auf einer Seite. Sie ist selbst bei
+     64 Antworten nur ~200px hoch und passt immer. Ohne das teilte Chromium sie
+     mitten im Raster und ließ — trotz break-after: avoid-page, das Chromium
+     hier schlicht ignoriert — das Gruppenlabel allein am Seitenfuß zurück.
+     Nebeneffekt, der hier zählt: die Aufteilung wird damit vorhersagbar, die
+     Vorschau kann sie exakt nachbilden. */
+  .solutions-group { break-inside: avoid; }
   .solutions-list li { break-inside: avoid; }
 }

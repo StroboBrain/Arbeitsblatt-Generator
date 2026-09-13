@@ -17,26 +17,18 @@
   </header>
 
   <main class="app-shell">
-    <!-- Dieselben beiden Aktionen wie unten in den Panels, damit sie ohne
-         Scrollen erreichbar sind. Die Schaltfläche gehört über das
-         form-Attribut zum Formular, obwohl sie außerhalb davon steht. -->
-    <div class="action-bar">
-      <button id="create-worksheet-top" class="primary-button" type="submit" form="worksheet-form" data-action="create">
-        <span aria-hidden="true">✦</span>
-        Zufälliges Arbeitsblatt erstellen
-      </button>
-      <button id="print-worksheet-top" class="secondary-button" type="button" data-action="print" aria-describedby="print-hint" hidden>
-        <span aria-hidden="true">↓</span>
-        Als PDF exportieren
-      </button>
-    </div>
-
     <div class="workspace-grid">
       <!-- Ohne Überschrift: die Schaltfläche "Zufälliges Arbeitsblatt erstellen"
            benennt die Aufgabe des Panels. aria-label ersetzt das entfallene
            aria-labelledby, damit der Abschnitt benannt bleibt. -->
       <section class="panel setup-panel" aria-label="Einstellungen für das Arbeitsblatt">
         <form id="worksheet-form">
+          <!-- Dieselbe Aktion steht hier und am Formularende, damit sie ohne
+               Scrollen auf einer hohen Vorschau erreichbar bleibt. -->
+          <button id="create-worksheet-top" class="primary-button" type="submit" data-action="create">
+            Zufälliges Arbeitsblatt erstellen
+          </button>
+
           <fieldset class="field-group">
             <legend class="field-group-label">Titel</legend>
             <input id="worksheet-title" name="title" type="text" value="Arbeitsblatt Brüche" autocomplete="off" aria-label="Titel des Arbeitsblatts">
@@ -76,14 +68,13 @@
 
           <p id="fill-hint" class="fill-hint" role="status"></p>
 
-          <button type="button" id="fill-pages" class="fill-button">
+          <button type="button" id="fill-pages" class="fill-button" hidden>
             <span aria-hidden="true">▦</span>
             Seiten füllen
           </button>
-          <p class="fill-note">Bringt das Arbeitsblatt auf eine gerade, volle Seitenzahl, damit beim beidseitigen Druck keine Rückseite leer bleibt.</p>
+          <p id="fill-pages-note" class="fill-note" hidden>Bringt das Arbeitsblatt auf eine gerade, volle Seitenzahl, damit beim beidseitigen Druck keine Rückseite leer bleibt.</p>
 
           <button id="create-worksheet" class="primary-button" type="submit" data-action="create">
-            <span aria-hidden="true">✦</span>
             Zufälliges Arbeitsblatt erstellen
           </button>
         </form>
@@ -91,6 +82,13 @@
 
       <div class="preview-column">
         <section class="panel preview-panel" aria-labelledby="preview-title">
+          <!-- Dieselbe Aktion steht hier und unter der Vorschau, damit sie ohne
+               Scrollen auf einer hohen Vorschau erreichbar bleibt. -->
+          <button id="print-worksheet-top" class="secondary-button" type="button" data-action="print" hidden>
+            <span aria-hidden="true">↓</span>
+            Als PDF exportieren
+          </button>
+
           <div class="panel-heading">
             <div>
               <p class="section-kicker">Vorschau</p>
@@ -107,11 +105,10 @@
               <small>Wählen Sie Aufgabentypen und Anzahl.</small>
             </div>
           </div>
-          <button id="print-worksheet" class="secondary-button" type="button" data-action="print" aria-describedby="print-hint" hidden>
+          <button id="print-worksheet" class="secondary-button" type="button" data-action="print" hidden>
             <span aria-hidden="true">↓</span>
             Als PDF exportieren
           </button>
-          <p id="print-hint" class="print-hint" hidden>Hinweis: Aktivieren Sie im Druckdialog den beidseitigen Druck (Duplex). Die Seitenzahl richtet sich nach der gewählten Auswahl.</p>
         </section>
       </div>
     </div>
