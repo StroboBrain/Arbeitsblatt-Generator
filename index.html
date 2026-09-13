@@ -21,97 +21,90 @@
       <section class="panel setup-panel" aria-labelledby="setup-title">
         <div class="panel-heading">
           <div>
-            <p class="section-kicker">01 · Ausgangspunkt</p>
             <h2 id="setup-title">Zufälliges Arbeitsblatt erstellen</h2>
           </div>
           <span class="step-number" aria-hidden="true">A</span>
         </div>
 
         <form id="worksheet-form">
-          <div class="field-group">
-            <label for="worksheet-title">Titel</label>
-            <input id="worksheet-title" name="title" type="text" value="Arbeitsblatt Brüche" autocomplete="off">
-          </div>
+          <fieldset class="field-group field-group--primary">
+            <legend class="field-group-label">Aufgabentypen und Anzahl</legend>
+            <div id="type-list" class="type-list"></div>
+          </fieldset>
 
           <fieldset class="field-group">
-            <legend class="field-group-label">Niveau</legend>
+            <legend class="field-group-label">Zahlenbereich · steuert den Schwierigkeitsgrad</legend>
+            <div class="slider-row">
+              <label for="max-numerator">Größter Zähler</label>
+              <output id="max-numerator-value" for="max-numerator">12</output>
+            </div>
+            <input type="range" id="max-numerator" name="maxNumerator" min="10" max="99" step="1" value="12">
+            <div class="slider-row">
+              <label for="max-denominator">Größter Nenner</label>
+              <output id="max-denominator-value" for="max-denominator">16</output>
+            </div>
+            <input type="range" id="max-denominator" name="maxDenominator" min="10" max="99" step="1" value="16">
             <div class="choice-group">
               <div class="choice-option">
-                <input type="radio" id="level-basic" name="level" value="basic" checked>
-                <label for="level-basic">Basis</label>
-              </div>
-              <div class="choice-option">
-                <input type="radio" id="level-intermediate" name="level" value="intermediate">
-                <label for="level-intermediate">Mittel</label>
-              </div>
-              <div class="choice-option">
-                <input type="radio" id="level-advanced" name="level" value="advanced">
-                <label for="level-advanced">Anspruchsvoll</label>
+                <input type="checkbox" id="proper-only" name="properOnly">
+                <label for="proper-only">Zähler immer kleiner</label>
               </div>
             </div>
           </fieldset>
 
           <fieldset class="field-group">
-            <legend class="field-group-label">Aufgabentypen</legend>
-            <div class="choice-group choice-group--grid3">
-              <div class="choice-option">
-                <input type="checkbox" id="section-kuerzen" name="sections" value="kuerzen" checked>
-                <label for="section-kuerzen">Kürzen</label>
-              </div>
-              <div class="choice-option">
-                <input type="checkbox" id="section-erweitern" name="sections" value="erweitern" checked>
-                <label for="section-erweitern">Erweitern</label>
-              </div>
-              <div class="choice-option">
-                <input type="checkbox" id="section-addition" name="sections" value="addition" checked>
-                <label for="section-addition">Addition</label>
-              </div>
-              <div class="choice-option">
-                <input type="checkbox" id="section-subtraktion" name="sections" value="subtraktion" checked>
-                <label for="section-subtraktion">Subtraktion</label>
-              </div>
-              <div class="choice-option">
-                <input type="checkbox" id="section-multiplikation" name="sections" value="multiplikation" checked>
-                <label for="section-multiplikation">Multiplikation</label>
-              </div>
-              <div class="choice-option">
-                <input type="checkbox" id="section-division" name="sections" value="division" checked>
-                <label for="section-division">Division</label>
-              </div>
-            </div>
+            <legend class="field-group-label">Gemischte Aufgaben</legend>
+            <div id="block-list" class="block-list"></div>
+            <button type="button" id="add-block" class="ghost-button">+ Block gemischte Aufgaben</button>
+            <p class="fill-note">Jeder Block enthält Aufgaben mit drei Brüchen. Wählen Sie je Block die Rechenarten.</p>
           </fieldset>
 
-          <button class="primary-button" type="submit">
+          <p id="fill-hint" class="fill-hint" role="status"></p>
+
+          <button type="button" id="fill-pages" class="fill-button">
+            <span aria-hidden="true">▦</span>
+            Seiten füllen
+          </button>
+          <p class="fill-note">Bringt das Arbeitsblatt auf eine gerade, volle Seitenzahl, damit beim beidseitigen Druck keine Rückseite leer bleibt.</p>
+
+          <button id="create-worksheet" class="primary-button" type="submit">
             <span aria-hidden="true">✦</span>
             Arbeitsblatt erstellen
           </button>
         </form>
       </section>
 
-      <section class="panel preview-panel" aria-labelledby="preview-title">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">02 · Vorschau</p>
-            <h2 id="preview-title">Noch ohne Aufgaben</h2>
-          </div>
-          <span class="preview-icon" aria-hidden="true">□</span>
+      <div class="preview-column">
+        <div class="title-bar">
+          <label for="worksheet-title">Titel</label>
+          <input id="worksheet-title" name="title" type="text" value="Arbeitsblatt Brüche" autocomplete="off" form="worksheet-form">
         </div>
 
-        <div id="preview-canvas" class="preview-canvas" aria-live="polite">
-          <div class="paper-placeholder">
-            <div class="placeholder-lines" aria-hidden="true">
-              <span></span><span></span><span></span>
+        <section class="panel preview-panel" aria-labelledby="preview-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Vorschau</p>
+              <h2 id="preview-title">Noch ohne Aufgaben</h2>
             </div>
-            <p>Die Arbeitsblatt-Vorschau erscheint hier.</p>
-            <small>Wählen Sie Niveau und Aufgabentypen und erstellen Sie Ihr Arbeitsblatt.</small>
+            <span class="preview-icon" aria-hidden="true">□</span>
           </div>
-        </div>
-        <button id="print-worksheet" class="secondary-button" type="button" aria-describedby="print-hint" hidden>
-          <span aria-hidden="true">↓</span>
-          Als PDF speichern
-        </button>
-        <p id="print-hint" class="print-hint" hidden>Hinweis: Aktivieren Sie im Druckdialog den beidseitigen Druck (Duplex). Die Seitenzahl richtet sich nach der gewählten Auswahl.</p>
-      </section>
+
+          <div id="preview-canvas" class="preview-canvas" aria-live="polite">
+            <div class="paper-placeholder">
+              <div class="placeholder-lines" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <p>Die Arbeitsblatt-Vorschau erscheint hier.</p>
+              <small>Wählen Sie Niveau und Aufgabentypen.</small>
+            </div>
+          </div>
+          <button id="print-worksheet" class="secondary-button" type="button" aria-describedby="print-hint" hidden>
+            <span aria-hidden="true">↓</span>
+            Als PDF speichern
+          </button>
+          <p id="print-hint" class="print-hint" hidden>Hinweis: Aktivieren Sie im Druckdialog den beidseitigen Druck (Duplex). Die Seitenzahl richtet sich nach der gewählten Auswahl.</p>
+        </section>
+      </div>
     </div>
   </main>
 
