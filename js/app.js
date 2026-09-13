@@ -17,16 +17,25 @@ const PAGE_LOAD_CAPACITY = 59;
 const SECTION_LOAD = 4;
 
 const PROPER_FRACTION_SHARE = 0.8;
-const DEFAULT_MAX_NUMERATOR = 12;
-const DEFAULT_MAX_DENOMINATOR = 16;
+const DEFAULT_MAX_NUMERATOR = 26;
+const DEFAULT_MAX_DENOMINATOR = 36;
 const DEFAULT_BLOCK_COUNT = 12;
 const BLOCK_COUNT_OPTIONS = [6, 9, 12, 15, 18, 24, 30];
+// Startbelegung der gemischten Aufgaben: ein Block mit allen vier Rechenarten.
+// Das Startblatt soll auf zwei Seiten passen, und mehr ist darin nicht frei —
+// die sechs Aufgabentypen und ihre Überschriften belegen zusammen mit diesem
+// Block bereits 111.8 der 114 Lasteinheiten zweier Seiten (siehe Lastmodell
+// oben). Ein zweiter Startblock oder ein größerer erster ergäbe drei Seiten.
+const DEFAULT_BLOCK_OPERATIONS = [
+  ["addition", "subtraktion", "multiplikation", "division"]
+];
+const START_BLOCK_COUNT = BLOCK_COUNT_OPTIONS[0];
 
 // Aufgabenzahl je Typ: Schnellwahl für die üblichen Größen, Auswahlliste für
 // alles dazwischen. Alle Werte sind Vielfache der Spaltenzahl, damit die
 // letzte Zeile eines Abschnitts immer voll ist.
 const TYPE_COUNT_OPTIONS = Array.from({ length: 17 }, (_, index) => index * TASK_GRID_COLUMNS);
-const TYPE_QUICK_PICKS = [0, 8, 16, 32];
+const TYPE_QUICK_PICKS = [0, 8, 16, 24, 32];
 const MAX_TYPE_COUNT = TYPE_COUNT_OPTIONS[TYPE_COUNT_OPTIONS.length - 1];
 
 // Obergrenzen für die Nenner der Rechenabschnitte. Die Nennerschieber begrenzen
@@ -38,6 +47,10 @@ const MIXED_DENOMINATOR_CAP = 12;
 // Bei Nenner 2 ist 1/2 der einzige mögliche Bruch — drei davon ergäben lauter
 // gleiche Aufgaben, deshalb startet die Rampe der gemischten Aufgaben höher.
 const MIXED_DENOMINATOR_START = 4;
+// Fester Startwert für die Beispielaufgabe eines Blocks: das Beispiel soll sich
+// nur ändern, wenn sich Rechenarten, Anzahl oder Zahlenbereich ändern — nicht
+// bei jeder anderen Einstellung im Formular.
+const BLOCK_EXAMPLE_SEED = 0x5eed;
 
 function createRandom(seed) {
   let state = seed >>> 0;
@@ -255,7 +268,7 @@ function createMultiplicationFractionTask(random, index, count, settings) {
     aDen: a.denominator,
     bNum: b.numerator,
     bDen: b.denominator,
-    operatorSymbol: "·",
+    operatorSymbol: "⋅",
     answerNumerator: numerator / divisor,
     answerDenominator: denominator / divisor
   };
@@ -293,12 +306,12 @@ function createDivisionFractionTask(random, index, count, settings) {
 
 // -- Mixed blocks: three fractions, two operators --------------------------
 
-const HIGH_PRECEDENCE = new Set(["·", ":"]);
+const HIGH_PRECEDENCE = new Set(["⋅", ":"]);
 
 function applyOperation(symbol, a, b) {
   if (symbol === "+") return { n: a.n * b.d + b.n * a.d, d: a.d * b.d };
   if (symbol === "−") return { n: a.n * b.d - b.n * a.d, d: a.d * b.d };
-  if (symbol === "·") return { n: a.n * b.n, d: a.d * b.d };
+  if (symbol === "⋅") return { n: a.n * b.n, d: a.d * b.d };
   return { n: a.n * b.d, d: a.d * b.n };
 }
 
@@ -357,7 +370,7 @@ function createMixedTask(symbols) {
 const OPERATION_CHOICES = [
   { value: "addition", label: "Addition", symbol: "+", createTask: createAdditionFractionTask },
   { value: "subtraktion", label: "Subtraktion", symbol: "−", createTask: createSubtractionFractionTask },
-  { value: "multiplikation", label: "Multiplikation", symbol: "·", createTask: createMultiplicationFractionTask },
+  { value: "multiplikation", label: "Multiplikation", symbol: "⋅", createTask: createMultiplicationFractionTask },
   { value: "division", label: "Division", symbol: ":", createTask: createDivisionFractionTask }
 ];
 
@@ -428,7 +441,7 @@ class WorksheetModel {
       sectionCounts: { ...DEFAULT_SECTION_COUNTS },
       maxNumerator: DEFAULT_MAX_NUMERATOR,
       maxDenominator: DEFAULT_MAX_DENOMINATOR,
-      properOnly: false,
+      properOnly: true,
       blocks: []
     };
     this.lastDefinitions = new Map();
@@ -524,6 +537,21 @@ class WorksheetModel {
     return this.scaleSectionCounts(settings, loadCapacity(Math.max(2, grownPages - 1)));
   }
 
+  // Eine Beispielaufgabe je Block, erzeugt mit demselben Generator wie das
+  // Arbeitsblatt und denselben Einstellungen — die Lehrkraft sieht also
+  // wirklich, was der Block liefert, nicht eine nachgebaute Attrappe. Der
+  // Index liegt in der Mitte der Rampe, damit das Beispiel weder die
+  // leichteste noch die schwerste Aufgabe des Blocks zeigt.
+  // Ein Block ohne Rechenart liefert null: er wird auch nicht erzeugt.
+  createBlockExamples(settings) {
+    return (settings.blocks || []).map((block) => {
+      if (!block.operations || block.operations.length === 0) return null;
+      const count = Math.max(1, block.count);
+      const random = createRandom(BLOCK_EXAMPLE_SEED + Number(block.id));
+      return createBlockDefinition(block).createTask(random, Math.floor((count - 1) / 2), count, settings);
+    });
+  }
+
   createWorksheet() {
     const seed = Math.floor(Math.random() * 0xffffffff);
     const random = createRandom(seed);
@@ -577,6 +605,51 @@ function loadCapacity(pages) {
   return FIRST_PAGE_LOAD + (pages - 1) * PAGE_LOAD_CAPACITY;
 }
 
+// Läuft dasselbe Lastmodell wie estimatePages Aufgabe für Aufgabe durch, um
+// die Vorschau an denselben Stellen sichtbar zu unterteilen, an denen der
+// Druck voraussichtlich umbricht. Das ist eine Näherung wie das Lastmodell
+// selbst — sie markiert, wo eine neue Seite beginnt, nicht das exakte Pixel.
+function computePageBreaks(worksheet) {
+  const breaks = [];
+  let load = 0;
+  let capacity = FIRST_PAGE_LOAD;
+  let page = 1;
+  worksheet.sections.forEach((section, sectionIndex) => {
+    load += SECTION_LOAD;
+    const columns = section.type === "mixed" ? MIXED_GRID_COLUMNS : TASK_GRID_COLUMNS;
+    let lastBreak = -1;
+    section.tasks.forEach((task, taskIndex) => {
+      const cost = section.type === "mixed" ? MIXED_LOAD_FACTOR : 1;
+      if (load + cost > capacity) {
+        page += 1;
+        capacity += PAGE_LOAD_CAPACITY;
+        // Auf den Anfang einer Zeile abrunden: die Markierung trennt zwei <ol>,
+        // und mitten in einer Zeile bliebe die letzte Zeile davor halb leer und
+        // die neue Seite begänne mit einer angebrochenen Zeile.
+        // Die vorgezogenen Aufgaben (höchstens columns - 1) bleiben dabei der
+        // alten Seite angerechnet. Die folgenden Markierungen stehen dadurch um
+        // bis zu drei Lasteinheiten je vorangegangenem Umbruch zu spät. Das ist
+        // Absicht: das Lastmodell füllt die Seiten ohnehin zu vorsichtig (in 28
+        // vermessenen Konfigurationen druckten zwei eine Seite weniger als
+        // vorhergesagt, keine eine Seite mehr), die Verschiebung geht also in
+        // dieselbe Richtung wie die Wirklichkeit. Die Anrechnung mitzuziehen
+        // wäre die exaktere, aber schlechtere Lösung: dann könnten mehr
+        // Markierungen entstehen, als der Hinweis unter dem Formular Seiten
+        // nennt, und Vorschau und Hinweis widersprächen sich sichtbar.
+        // Die Abrundung kann den Umbruch nicht hinter einen vorherigen ziehen:
+        // eine Seite fasst immer mehr als eine Zeile, sonst bliebe lastBreak
+        // die Notbremse.
+        const rowStart = Math.floor(taskIndex / columns) * columns;
+        const snapped = rowStart > lastBreak ? rowStart : taskIndex;
+        lastBreak = snapped;
+        breaks.push({ sectionIndex, taskIndex: snapped, page });
+      }
+      load += cost;
+    });
+  });
+  return breaks;
+}
+
 class WorksheetView {
   constructor(root) {
     this.root = root;
@@ -593,12 +666,16 @@ class WorksheetView {
     this.fillHint = root.querySelector("#fill-hint");
     this.previewTitle = root.querySelector("#preview-title");
     this.previewCanvas = root.querySelector("#preview-canvas");
-    this.printButton = root.querySelector("#print-worksheet");
+    // Dieselbe Aktion steht oben und unten; beide Schaltflächen tragen
+    // data-action="print" statt einer zweiten ID.
+    this.printButtons = Array.from(root.querySelectorAll("[data-action='print']"));
     this.printHint = root.querySelector("#print-hint");
     this.typeList = root.querySelector("#type-list");
-    this.submitButton = root.querySelector("#create-worksheet");
+    // Dieselbe Aktion steht oben und unten; beide tragen data-action="create".
+    this.submitButtons = Array.from(root.querySelectorAll("[data-action='create']"));
     this.blockCounter = 0;
     this.renderTypeRows();
+    this.watchPreviewWidth();
   }
 
   renderTypeRows() {
@@ -666,6 +743,18 @@ class WorksheetView {
     });
   }
 
+  // Zeigt je Block die Beispielaufgabe aus dem Model. Ohne gewählte Rechenart
+  // bleibt die Zeile leer — dort steht bereits die Warnung.
+  renderBlockExamples(examples) {
+    this.blockList.querySelectorAll(".block-card").forEach((card, index) => {
+      const slot = card.querySelector(".block-example");
+      if (!slot) return;
+      const task = examples[index];
+      slot.hidden = !task;
+      if (task) slot.querySelector(".block-example-task").innerHTML = this.buildTaskRowHtml("mixed", task);
+    });
+  }
+
   readBlocks() {
     return Array.from(this.blockList.querySelectorAll(".block-card")).map((card) => ({
       id: card.dataset.blockId,
@@ -682,7 +771,8 @@ class WorksheetView {
   }
 
   bindSettingsChange(handler) {
-    const sync = () => {
+    const sync = (event) => {
+      this.syncProperOnlyWithSliders(event ? event.target : null);
       this.syncRangeOutputs();
       this.syncQuickPicks();
       this.syncBlockWarnings();
@@ -690,6 +780,39 @@ class WorksheetView {
     };
     this.form.addEventListener("input", sync);
     this.form.addEventListener("change", sync);
+  }
+
+  // Obergrenze des Zähler-Schiebers, solange "Zähler immer kleiner" gilt: einen
+  // unter dem Nenner. Gleichstand reicht nicht — bei Zähler 36 und Nenner 36
+  // wäre 36/36 erlaubt, und das ist kein echter Bruch kleiner als eins.
+  // Das Maximum des Schiebers begrenzt nach unten: bei Nenner 10 gäbe es sonst
+  // eine Obergrenze von 9, die der Zähler-Schieber gar nicht einstellen kann.
+  properNumeratorCap() {
+    const floor = Number(this.maxNumeratorInput.min) || 1;
+    return Math.max(floor, Number(this.maxDenominatorInput.value) - 1);
+  }
+
+  // "Zähler immer kleiner" und die beiden Zahlenbereich-Schieber halten sich
+  // gegenseitig konsistent: Wird die Checkbox angehakt, während der
+  // Zähler-Schieber zu hoch steht, zieht er auf einen unter den Nenner nach,
+  // damit die Bedingung sofort erfüllt ist.
+  // Werden stattdessen die Schieber bewegt, folgt die Checkbox automatisch
+  // dem, was die Schieberstellung bereits hergibt — Zähler unter Nenner
+  // bedeutet angehakt, sonst abgehakt. Andere Formularänderungen lassen beides
+  // unangetastet.
+  syncProperOnlyWithSliders(target) {
+    if (target === this.properOnlyInput) {
+      // Nur nach unten angleichen: ein bereits kleinerer Zählerbereich bleibt
+      // stehen. Ihn anzuheben würde den von der Lehrkraft eingestellten
+      // Zahlenbereich beim Anhaken stillschweigend vergrößern.
+      const cap = this.properNumeratorCap();
+      if (this.properOnlyInput.checked && Number(this.maxNumeratorInput.value) > cap) {
+        this.maxNumeratorInput.value = String(cap);
+      }
+      return;
+    }
+    if (target !== this.maxNumeratorInput && target !== this.maxDenominatorInput) return;
+    this.properOnlyInput.checked = Number(this.maxNumeratorInput.value) <= this.properNumeratorCap();
   }
 
   bindQuickPick(handler) {
@@ -721,7 +844,7 @@ class WorksheetView {
   }
 
   bindPrint(handler) {
-    this.printButton.addEventListener("click", handler);
+    this.printButtons.forEach((button) => button.addEventListener("click", handler));
   }
 
   bindTaskClick(handler) {
@@ -732,7 +855,12 @@ class WorksheetView {
       const ol = li.closest(".task-list");
       const sectionEl = ol.closest(".worksheet-section");
       const sectionKey = sectionEl.dataset.sectionKey;
-      const taskIndex = Array.from(ol.children).indexOf(li);
+      // Ein Abschnitt kann durch die Seitenumbruch-Markierungen in mehrere
+      // <ol> aufgeteilt sein; der Index innerhalb der angeklickten Liste ist
+      // dann nicht der Index im Abschnitt. Das start-Attribut der Liste
+      // liefert den Versatz (siehe buildSectionHtml).
+      const offset = Number(ol.getAttribute("start") || "1") - 1;
+      const taskIndex = offset + Array.from(ol.children).indexOf(li);
       handler(sectionKey, taskIndex);
     });
   }
@@ -765,6 +893,10 @@ class WorksheetView {
       <p class="block-prompt">Rechenarten wählen</p>
       <div class="choice-group choice-group--grid4">${options}</div>
       <p class="block-warning">Ohne Rechenart wird dieser Block nicht erzeugt.</p>
+      <p class="block-example" hidden>
+        <span class="block-example-label">Beispiel</span>
+        <span class="block-example-task"></span>
+      </p>
       <div class="block-count-row">
         <label for="block-${blockId}-count">Aufgaben</label>
         <select class="block-count" id="block-${blockId}-count">${countOptions}</select>
@@ -813,7 +945,7 @@ class WorksheetView {
     // wachsen kann: dann wird auf die nächstkleinere gerade Seitenzahl gekürzt.
     this.fillButton.disabled = layout.empty
       || !(odd || (layout.canGrow && layout.missing >= TASK_GRID_COLUMNS));
-    this.submitButton.disabled = layout.empty;
+    this.submitButtons.forEach((button) => { button.disabled = layout.empty; });
   }
 
   fractionHtml(numerator, denominator) {
@@ -831,7 +963,11 @@ class WorksheetView {
     return `<span class="fraction" aria-label="${label}"><span>${part(numerator)}</span><span>${part(denominator)}</span></span>`;
   }
 
-  buildItemHtml(type, task) {
+  // Der reine Aufgabeninhalt ohne <li>/<button>: die Vorschau umschließt ihn
+  // mit einer Schaltfläche zum Neuwürfeln, das Beispiel im Block-Kärtchen
+  // zeigt ihn unverändert (eine Schaltfläche im Formular wäre dort auch die
+  // falsche Semantik).
+  buildTaskRowHtml(type, task) {
     let row;
     if (type === "erweitern") {
       row = `${this.fractionHtml(task.numerator, task.denominator)} <span class="equals">=</span> ${this.fractionHtml(task.targetNumerator, task.targetDenominator)}`;
@@ -842,6 +978,11 @@ class WorksheetView {
     } else {
       row = `${this.fractionHtml(task.numerator, task.denominator)} <span class="equals">=</span> ${this.fractionHtml(null, null)}`;
     }
+    return row;
+  }
+
+  buildItemHtml(type, task) {
+    const row = this.buildTaskRowHtml(type, task);
     return `<li><button type="button" class="task-row">${row}<span class="task-hint" aria-hidden="true">Zum Ändern anklicken</span><span class="visually-hidden"> — anklicken zum Neuwürfeln</span></button></li>`;
   }
 
@@ -854,13 +995,39 @@ class WorksheetView {
     return this.fractionHtml(task.answerNumerator, task.answerDenominator);
   }
 
-  buildSectionHtml(section, sectionNumber) {
-    const items = section.tasks.map((task) => this.buildItemHtml(section.type, task)).join("");
+  // pageBreaks: aufsteigend sortierte taskIndex-Stellen, an denen laut
+  // Lastmodell innerhalb dieses Abschnitts eine neue Seite beginnt. Die Liste
+  // wird dafür in mehrere <ol> aufgeteilt, deren start-Attribut die
+  // abschnittseigene Nummerierung fortsetzt — Seiten unterbrechen die Zählung
+  // nicht, nur Abschnitte tun das (siehe Nummerierungslogik weiter oben).
+  buildSectionHtml(section, sectionNumber, pageBreaks = []) {
     const listClass = section.type === "mixed" ? "task-list task-list--mixed" : "task-list";
+    let listsHtml = "";
+    let start = 0;
+    pageBreaks.forEach(({ taskIndex, page }) => {
+      const items = section.tasks.slice(start, taskIndex).map((task) => this.buildItemHtml(section.type, task)).join("");
+      listsHtml += `<ol class="${listClass}" start="${start + 1}">${items}</ol>${this.buildPageBreakHtml(page)}`;
+      start = taskIndex;
+    });
+    const items = section.tasks.slice(start).map((task) => this.buildItemHtml(section.type, task)).join("");
+    listsHtml += `<ol class="${listClass}" start="${start + 1}">${items}</ol>`;
     return `
       <div class="worksheet-section" data-section-key="${section.key}">
-        <h4 class="section-heading">${toRoman(sectionNumber)}. ${escapeHtml(section.heading)}</h4>
-        <ol class="${listClass}" start="1">${items}</ol>
+        <div class="section-heading-row">
+          <h4 class="section-heading">${toRoman(sectionNumber)}. ${escapeHtml(section.heading)}</h4>
+          <span class="section-heading-line" aria-hidden="true"></span>
+        </div>
+        ${listsHtml}
+      </div>`;
+  }
+
+  // Rein visuelle Markierung in der Vorschau, wo laut Lastmodell voraussichtlich
+  // umbrochen wird — eine Näherung, kein exaktes Abbild des Druckdialogs.
+  buildPageBreakHtml(page) {
+    return `
+      <div class="page-break" role="presentation">
+        <span class="page-break-label">Seite ${page - 1} Ende</span>
+        <span class="page-break-label">Seite ${page}</span>
       </div>`;
   }
 
@@ -885,19 +1052,74 @@ class WorksheetView {
 
   renderPreview(worksheet) {
     const worksheetTitle = worksheet.title || "Arbeitsblatt Brüche";
+    const pageBreaks = computePageBreaks(worksheet);
     let sectionNumber = 0;
-    const sectionsHtml = worksheet.sections.map((section) => this.buildSectionHtml(section, ++sectionNumber)).join("");
+    const sectionsHtml = worksheet.sections.map((section, sectionIndex) => {
+      // Ein Umbruch direkt vor dem ersten Task eines Abschnitts trennt zwei
+      // Abschnitte statt eine Aufgabenliste — die Markierung steht dann vor
+      // dem ganzen Abschnitt statt in dessen <ol> aufzutauchen.
+      const beforeSection = pageBreaks.find((b) => b.sectionIndex === sectionIndex && b.taskIndex === 0);
+      const withinSection = pageBreaks.filter((b) => b.sectionIndex === sectionIndex && b.taskIndex > 0);
+      const marker = beforeSection ? this.buildPageBreakHtml(beforeSection.page) : "";
+      return marker + this.buildSectionHtml(section, ++sectionNumber, withinSection);
+    }).join("");
 
     this.previewTitle.textContent = worksheetTitle;
     this.previewCanvas.dataset.ready = "true";
     this.previewCanvas.innerHTML = `
-      <article class="worksheet-paper" lang="de">
-        <h3 class="worksheet-title-line">${escapeHtml(worksheetTitle)}</h3>
-        ${sectionsHtml}
-        ${this.buildSolutionsHtml(worksheet)}
-      </article>`;
-    this.printButton.hidden = false;
+      <div class="preview-stage">
+        <div class="preview-scaler">
+          <article class="worksheet-paper" lang="de">
+            <h3 class="worksheet-title-line">${escapeHtml(worksheetTitle)}</h3>
+            ${sectionsHtml}
+            ${this.buildSolutionsHtml(worksheet)}
+          </article>
+        </div>
+      </div>`;
+    this.fitPreview();
+    this.printButtons.forEach((button) => { button.hidden = false; });
     this.printHint.hidden = false;
+  }
+
+  // Das Blatt hat immer A4-Maße (siehe .worksheet-paper). Passt es nicht in die
+  // Vorschauspalte, wird es als Ganzes verkleinert statt in der Breite
+  // gestaucht — eine Stauchung würde einen anderen Zeilen- und Spaltenumbruch
+  // zeigen als der Ausdruck. Vergrößert wird nie: 100% ist Originalgröße.
+  fitPreview() {
+    const stage = this.previewCanvas.querySelector(".preview-stage");
+    const paper = this.previewCanvas.querySelector(".worksheet-paper");
+    if (!stage || !paper) return;
+    const canvasStyles = window.getComputedStyle(this.previewCanvas);
+    const available = this.previewCanvas.clientWidth
+      - parseFloat(canvasStyles.paddingLeft)
+      - parseFloat(canvasStyles.paddingRight);
+    // offsetWidth/offsetHeight ignorieren das transform und liefern damit die
+    // ungeskalierte A4-Größe — genau die Bezugsgröße für den Faktor.
+    const paperWidth = paper.offsetWidth;
+    const paperHeight = paper.offsetHeight;
+    if (!paperWidth || !paperHeight || !(available > 0)) return;
+    const scale = Math.min(1, available / paperWidth);
+    stage.style.setProperty("--preview-scale", scale);
+    stage.style.width = `${Math.round(paperWidth * scale)}px`;
+    stage.style.height = `${Math.round(paperHeight * scale)}px`;
+  }
+
+  // Der Maßstab hängt an der Breite der Vorschauspalte. Beobachtet wird nur
+  // diese Breite: fitPreview() setzt selbst die Höhe der Bühne, eine Reaktion
+  // auf Höhenänderungen würde sich im Kreis drehen.
+  watchPreviewWidth() {
+    let lastWidth = 0;
+    const check = () => {
+      const width = this.previewCanvas.clientWidth;
+      if (width === lastWidth) return;
+      lastWidth = width;
+      this.fitPreview();
+    };
+    if (typeof ResizeObserver === "function") {
+      new ResizeObserver(check).observe(this.previewCanvas);
+    } else {
+      window.addEventListener("resize", check);
+    }
   }
 }
 
@@ -914,11 +1136,25 @@ class WorksheetController {
     this.view.bindQuickPick(() => this.updateHint());
     this.view.bindRemoveBlock(() => this.updateHint());
     this.view.syncRangeOutputs();
-    this.updateHint();
+    // Startbelegung: ein fertig eingestellter Block, statt mit leeren
+    // "Gemischte Aufgaben" zu starten — klein gehalten, damit das Startblatt
+    // auf zwei Seiten passt (siehe DEFAULT_BLOCK_OPERATIONS).
+    DEFAULT_BLOCK_OPERATIONS.forEach((operations) => this.view.addBlock(START_BLOCK_COUNT, operations));
+    // Startet bereits auf einer geraden Seitenzahl, statt die Lehrkraft dafür
+    // manuell auf "Seiten füllen" klicken zu lassen. Dabei werden nur die
+    // Aufgabentypen und bereits vorhandenen Blöcke ausgebaut — ein Block wird
+    // beim automatischen Start nicht hinzugefügt, das bleibt dem expliziten
+    // Klick vorbehalten.
+    this.growToEvenPages({ allowNewBlocks: false });
+    // Zeigt sofort ein fertiges Arbeitsblatt statt einer leeren Vorschau, auf
+    // die die Lehrkraft erst per Klick auf "Arbeitsblatt erstellen" käme.
+    this.handleSubmit();
   }
 
   updateHint() {
-    this.view.renderFillHint(this.model.estimateLayout(this.view.readSettings()));
+    const settings = this.view.readSettings();
+    this.view.renderFillHint(this.model.estimateLayout(settings));
+    this.view.renderBlockExamples(this.model.createBlockExamples(settings));
   }
 
   handleAddBlock() {
@@ -926,9 +1162,16 @@ class WorksheetController {
     this.updateHint();
   }
 
+  handleFillPages() {
+    this.growToEvenPages({ allowNewBlocks: true });
+    this.handleSubmit();
+  }
+
   // Bringt das Blatt auf eine gerade Seitenzahl: zuerst die gewählten
   // Aufgabentypen proportional, dann die Blöcke in den verbleibenden Platz.
-  handleFillPages() {
+  // Mit allowNewBlocks: false wachsen nur bereits vorhandene Blöcke — es wird
+  // kein neuer, unkonfigurierter Block angelegt.
+  growToEvenPages({ allowNewBlocks }) {
     const start = this.view.readSettings();
     if (Object.values(start.sectionCounts).some((count) => count > 0)) {
       this.view.setSectionCounts(this.model.fillCounts(start));
@@ -951,6 +1194,7 @@ class WorksheetController {
         this.view.setBlockCount(index, nextBlockOption(current.blocks[index].count));
         continue;
       }
+      if (!allowNewBlocks) break;
       // Alle Blöcke am Maximum: ein weiterer Block schafft Platz. Er übernimmt
       // die Rechenarten des letzten konfigurierten Blocks, damit die Auswahl
       // der Lehrkraft nicht stillschweigend durch einen leeren Block ersetzt wird.
@@ -959,7 +1203,6 @@ class WorksheetController {
       if (!source || !fits([...current.blocks, { ...source, count: smallest }], current)) break;
       this.view.addBlock(smallest, source.operations);
     }
-    this.handleSubmit();
   }
 
   handleTaskClick(sectionKey, taskIndex) {
