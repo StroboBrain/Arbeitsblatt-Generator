@@ -1,9 +1,2 @@
-# Claude Code
-CLAUDE.md
-.claude/
-
-# Curriculum reference material / project context (not part of the app)
-contexFolder/
-
 # Ignore IDE and editor folders
 .vscode/

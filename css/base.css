@@ -1,0 +1,37 @@
+:root {
+  --ink: #26362a;
+  --muted: #6f8a6f;
+  --paper: #f4f9f1;
+  --canvas: #dcebd9;
+  --line: #b7cdb0;
+  --accent: #6a9c5c;
+  --accent-dark: #4b7a3f;
+  --shadow: 6px 6px 0 rgba(38, 54, 42, 0.55);
+  --shadow-soft: rgba(38, 54, 42, 0.16);
+  --focus-ring: rgba(106, 156, 92, 0.4);
+  color: var(--ink);
+  background: var(--canvas);
+  font-family: Consolas, "SF Mono", "Cascadia Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+/* Die Regeln für Schaltflächen setzen display selbst und gewinnen gegen die
+   [hidden]-Regel des Browsers (Autorenstil schlägt UA-Stil). Ohne diese Zeile
+   bliebe ein Element mit hidden-Attribut sichtbar. */
+[hidden] { display: none !important; }
+
+body { margin: 0; min-width: 320px; background: var(--canvas); }
+
+.site-header, .site-footer, .app-shell { width: min(1560px, calc(100% - 48px)); margin: 0 auto; }
+.site-header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 24px; border-bottom: 2px solid var(--ink); }
+.brand { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; }
+.brand-name { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.status-pill { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.status-dot { width: 8px; height: 8px; background: var(--accent); }
+
+.app-shell { padding: 40px 0 76px; }
+.section-kicker { margin: 0 0 13px; color: var(--accent-dark); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+h1, h2, p { margin-top: 0; }
+
+.site-footer { display: flex; justify-content: space-between; padding: 20px 0 27px; border-top: 2px solid var(--ink); color: var(--muted); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+

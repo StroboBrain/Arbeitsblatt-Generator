@@ -1,0 +1,21 @@
+/* The renderer's page plan is authoritative. The browser only prints these pages. */
+@media print {
+  @page { size: A4; margin: 16mm; }
+  :root { background: white; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { min-width: 0; background: white; }
+  .site-header, .generator-intro, .setup-panel, .site-footer,
+  .preview-panel > .panel-heading, .secondary-button, .print-note, .task-hint,
+  .task-row > .visually-hidden { display: none !important; }
+  .app-shell, .workspace-grid, .preview-column, .preview-panel, .preview-canvas {
+    display: block; width: auto; min-height: 0; margin: 0; padding: 0; border: 0; box-shadow: none; background: white;
+  }
+  .preview-canvas { place-items: normal; }
+  .preview-stage, .preview-scaler { position: static !important; width: 100% !important; height: auto !important; transform: none !important; }
+  .worksheet-pages { display: block; }
+  .worksheet-paper { width: 100%; min-height: 0; margin: 0; padding: 0; border: 0; outline: 0; box-shadow: none; break-after: page; }
+  .worksheet-paper:last-child { break-after: auto; }
+  .task-row { cursor: default; }
+  .task-row:hover { background: transparent; border-color: transparent; }
+  .task-list > li, .solutions-group { break-inside: avoid; }
+}

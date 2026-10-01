@@ -1,0 +1,56 @@
+/* Page geometry comes from js/layout/print-metrics.js via CSS custom properties. */
+.preview-canvas { display: grid; min-height: 480px; place-items: center; padding: 24px; background: var(--canvas); }
+.preview-stage { position: relative; }
+.preview-scaler { position: absolute; top: 0; left: 0; transform: scale(var(--preview-scale, 1)); transform-origin: top left; }
+.worksheet-pages { display: flex; flex-direction: column; gap: 40px; }
+.paper-placeholder { width: min(100%, 380px); min-height: 300px; padding: 37px 30px; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); text-align: center; }
+.placeholder-lines { display: grid; gap: 9px; margin-bottom: 48px; }
+.placeholder-lines span { display: block; height: 2px; background: var(--line); }
+.placeholder-lines span:first-child { width: 58%; margin: 0 auto; background: var(--accent); }
+.paper-placeholder p { margin-bottom: 9px; font-size: 18px; line-height: 1.3; }
+.paper-placeholder small { display: block; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+/* Worksheets remain monochrome for photocopying, independent of the app palette. */
+.worksheet-paper {
+  --ink: #262626; --muted: #666666; --paper: #ffffff; --canvas: #e9e9e9;
+  --line: #c9c9c9; --accent: #4d4d4d; --accent-dark: #333333;
+  --shadow: 6px 6px 0 rgba(38, 38, 38, 0.55);
+  display: flow-root; width: 210mm; min-height: 297mm; padding: 16mm;
+  background: var(--paper); outline: 1px solid var(--line); box-shadow: var(--shadow); color: var(--ink);
+}
+.worksheet-title-line { height: var(--title-height); margin: 0; padding-bottom: 18px; overflow: hidden; font-size: 22px; line-height: 26px; font-weight: 700; letter-spacing: 0.03em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.worksheet-section { margin-top: var(--section-gap); }
+.worksheet-paper > .worksheet-section:first-child,
+.worksheet-title-line + .worksheet-section,
+.worksheet-section--continued { margin-top: 0; }
+.section-heading-row { display: flex; align-items: start; gap: 10px; height: var(--section-head); padding-bottom: 12px; }
+.section-heading { flex: none; margin: 0; padding: 3px 9px; background: var(--ink); color: var(--paper); font-size: 12px; line-height: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.section-heading-line { flex: 1; height: 2px; min-width: 20px; margin-top: 9px; background: var(--ink); }
+.learning-hint { height: calc(var(--scaffold-height) - 12px); margin: 0 0 12px; padding: 10px 12px; border-left: 3px solid var(--ink); background: var(--canvas); font-size: 11px; line-height: 15px; }
+
+.worksheet-solutions { margin-top: 22px; }
+.worksheet-paper > .worksheet-solutions:first-child,
+.worksheet-solutions--continued { margin-top: 0; }
+.solutions-banner { height: var(--solution-banner); padding-top: 14px; border-top: 2px solid var(--ink); }
+.worksheet-label { display: inline-block; margin: 0; padding: 2px 8px; background: var(--ink); color: var(--paper); font-size: 9px; line-height: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.solutions-group { margin-top: var(--solution-gap); }
+.solutions-group--first { margin-top: 0; }
+.solutions-group-label { height: var(--solution-head); margin: 0; color: var(--accent-dark); font-size: 9px; line-height: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.solutions-list { display: grid; grid-template-columns: repeat(var(--solution-columns), 1fr); grid-auto-rows: var(--solution-row); gap: 0; margin: 0; padding: 0; list-style: none; box-shadow: inset 0 1px var(--line), inset 1px 0 var(--line); font-size: 8px; }
+.solutions-list li { height: var(--solution-row); line-height: 21px; padding: 0 3px; text-align: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.solutions-list li::before { content: counter(list-item) "."; margin-right: 2px; color: var(--muted); font-size: 7px; vertical-align: middle; }
+.task-list { display: grid; grid-template-columns: repeat(var(--task-columns), 1fr); grid-auto-rows: var(--task-row); column-gap: 18px; row-gap: var(--task-gap); margin: 0; padding: 0; list-style: none; font-size: 17px; line-height: 1.3; }
+.task-list--mixed { grid-template-columns: repeat(var(--mixed-columns), 1fr); column-gap: 14px; }
+.task-list > li { height: var(--task-row); }
+.task-row::before { content: counter(list-item) "."; min-width: 3ch; text-align: right; color: var(--muted); font-size: 10px; }
+.task-row { position: relative; display: inline-flex; align-items: center; gap: 6px; height: var(--task-row); vertical-align: middle; border: 1px solid transparent; background: transparent; padding: 0 2px; margin: 0 -2px; font: inherit; color: inherit; cursor: pointer; }
+.task-row:hover { border-color: var(--line); background: var(--canvas); }
+.task-row:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.task-hint { position: absolute; bottom: 100%; left: 50%; z-index: 5; margin-bottom: 6px; padding: 4px 8px; background: var(--ink); color: var(--paper); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; opacity: 0; visibility: hidden; transform: translate(-50%, 2px); transition: opacity 0.12s ease, transform 0.12s ease; pointer-events: none; }
+.task-row:hover .task-hint, .task-row:focus-visible .task-hint { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.equals, .operator { min-width: 1ch; text-align: center; font-weight: 700; }
+.fraction { display: inline-flex; flex-direction: column; min-width: calc(2ch + 4px); vertical-align: middle; margin: 0 2px; line-height: 1; text-align: center; }
+.fraction > span:first-child { padding: 0 2px 2px; border-bottom: 2px solid currentColor; }
+.fraction > span:last-child { padding: 2px 2px 0; }
+.fraction-blank { display: inline-block; min-width: 16px; }

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Arbeitsblattgenerator für Lehrpersonen: erstellt Mathematik-Arbeitsblätter für den deutschsprachigen Unterricht.">
+  <title>Bruchgenerator · Arbeitsblattgenerator</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Arbeitsblattgenerator Startseite">
+      <span class="brand-name">Arbeitsblattgenerator</span>
+    </a>
+    <span class="status-pill"><span class="status-dot" aria-hidden="true"></span>Entwurf</span>
+  </header>
+
+  <main class="app-shell">
+    <div class="generator-intro">
+      <h1>Bruchgenerator</h1>
+      <a class="back-link" href="./">← Zur Themenauswahl</a>
+    </div>
+    <noscript><p>Bitte aktivieren Sie JavaScript, um Aufgaben und Vorschau zu erstellen.</p></noscript>
+    <div class="workspace-grid">
+      <!-- Ohne Überschrift: die Schaltfläche "Zufälliges Arbeitsblatt erstellen"
+           benennt die Aufgabe des Panels. aria-label ersetzt das entfallene
+           aria-labelledby, damit der Abschnitt benannt bleibt. -->
+      <section class="panel setup-panel" aria-label="Einstellungen für das Arbeitsblatt">
+        <form id="worksheet-form">
+          <!-- Dieselbe Aktion steht hier und am Formularende, damit sie ohne
+               Scrollen auf einer hohen Vorschau erreichbar bleibt. -->
+          <button id="create-worksheet-top" class="primary-button" type="submit" data-action="create">
+            Zufälliges Arbeitsblatt erstellen
+          </button>
+
+          <fieldset class="field-group">
+            <legend class="field-group-label">Titel</legend>
+            <input id="worksheet-title" name="title" type="text" value="Arbeitsblatt Brüche" autocomplete="off" aria-label="Titel des Arbeitsblatts">
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend class="field-group-label">Zahlenbereich · steuert den Schwierigkeitsgrad</legend>
+            <div class="slider-row">
+              <label for="max-numerator">Größter Zähler</label>
+              <output id="max-numerator-value" for="max-numerator">26</output>
+            </div>
+            <input type="range" id="max-numerator" name="maxNumerator" min="10" max="99" step="1" value="26">
+            <div class="slider-row">
+              <label for="max-denominator">Größter Nenner</label>
+              <output id="max-denominator-value" for="max-denominator">36</output>
+            </div>
+            <input type="range" id="max-denominator" name="maxDenominator" min="10" max="99" step="1" value="36">
+            <div class="choice-group">
+              <div class="choice-option">
+                <input type="checkbox" id="proper-only" name="properOnly" checked>
+                <label for="proper-only">Zähler immer kleiner</label>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="field-group field-group--primary">
+            <legend class="field-group-label">Aufgabentypen und Anzahl</legend>
+            <div id="type-list" class="type-list"></div>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend class="field-group-label">Gemischte Aufgaben</legend>
+            <div id="block-list" class="block-list"></div>
+            <button type="button" id="add-block" class="ghost-button">+ Block gemischte Aufgaben</button>
+            <p class="fill-note">Jeder Block enthält Aufgaben mit drei Brüchen. Wählen Sie je Block die Rechenarten.</p>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend class="field-group-label">Lernhilfen</legend>
+            <div class="choice-group"><div class="choice-option">
+              <input type="checkbox" id="learning-hints" name="learningHints">
+              <label for="learning-hints">Merksätze auf dem Arbeitsblatt</label>
+            </div></div>
+            <p class="fill-note">Ein kurzer Hinweis je Abschnitt unterstützt beim selbstständigen Üben.</p>
+          </fieldset>
+
+          <p id="fill-hint" class="fill-hint" role="status"></p>
+
+          <button type="button" id="fill-pages" class="fill-button" hidden>
+            <span aria-hidden="true">▦</span>
+            Seiten füllen
+          </button>
+          <p id="fill-pages-note" class="fill-note" hidden>Bringt das Arbeitsblatt auf eine gerade, volle Seitenzahl, damit beim beidseitigen Druck keine Rückseite leer bleibt.</p>
+
+          <button id="create-worksheet" class="primary-button" type="submit" data-action="create">
+            Zufälliges Arbeitsblatt erstellen
+          </button>
+        </form>
+      </section>
+
+      <div class="preview-column">
+        <section class="panel preview-panel" aria-labelledby="preview-title">
+          <!-- Dieselbe Aktion steht hier und unter der Vorschau, damit sie ohne
+               Scrollen auf einer hohen Vorschau erreichbar bleibt. -->
+          <button id="print-worksheet-top" class="secondary-button" type="button" data-action="print" hidden>
+            <span aria-hidden="true">↓</span>
+            Als PDF exportieren
+          </button>
+
+          <p class="print-note">Im Druckdialog „Als PDF speichern“ wählen. Für die gezeigte Aufteilung: A4, Maßstab 100 %, Kopf- und Fußzeilen aus.</p>
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Vorschau</p>
+              <h2 id="preview-title">Noch ohne Aufgaben</h2>
+            </div>
+          </div>
+
+          <div id="preview-canvas" class="preview-canvas" aria-live="polite">
+            <div class="paper-placeholder">
+              <div class="placeholder-lines" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <p>Die Arbeitsblatt-Vorschau erscheint hier.</p>
+              <small>Wählen Sie Aufgabentypen und Anzahl.</small>
+            </div>
+          </div>
+          <button id="print-worksheet" class="secondary-button" type="button" data-action="print" hidden>
+            <span aria-hidden="true">↓</span>
+            Als PDF exportieren
+          </button>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <span>Arbeitsblattgenerator</span>
+    <span>Für Lehrpersonen · Version 0.5</span>
+  </footer>
+</body>
+</html>
